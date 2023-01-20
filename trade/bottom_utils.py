@@ -150,6 +150,30 @@ class TradeUtils:
         self.tsi.judge_data.d_kline = kline
         self.tsi.judge_data.d_cond = cond_num
 
+    def try_improve_sl_price(self) -> None:
+        '''bottom trade 尝试提高止损价
+        当开仓后一个交易日，将止损价格提升至开仓价
+        '''
+        td = self.tsi.trade_data
+        logger = self.logger
+        current_date = self.get_current_date()
+        trade_date = td.trade_date
+        log_str = '{} {} {} 交易时间已到下一个交易日,将止损价提高至{}'
+        time_delta = current_date - trade_date
+        if not td.has_islp:
+            if ((trade_date.hour >= 21 and ((current_date.day > trade_date.day
+                and current_date.hour > 15) or time_delta.days >= 1))
+                or (trade_date.hour <= 15 and
+                    (current_date.hour > 15 or
+                     current_date.day > trade_date.day))):
+                td.slp = td.price
+                td.has_islp = True
+                self.dbservice.update_tsi(self.tsi, current_date)
+                logger.info(log_str.format(
+                    self.get_current_date_str(),
+                    self.tsi.current_symbol,
+                    self.tsi.custom_symbol, td.slp))
+
 
 class TradeUtilsShort(TradeUtils):
     logger = LoggerGetter()
@@ -163,32 +187,6 @@ class TradeUtilsShort(TradeUtils):
         price = self.get_current_price()
         td = self.tsi.trade_data
         return price >= td.slp
-
-    def try_improve_sl_price(self) -> None:
-        '''尝试提高止损价
-        当盈亏比达到1:10后将止损价格提升至1:5
-        '''
-        td = self.tsi.trade_data
-        logger = self.logger
-        price = self.get_current_price()
-        trade_time = self.get_current_date_str()
-        log_str = '{}<做空>现价{}达到1:{}盈亏比,将止损价提高至{}'
-        calc_price = self.calc_price
-        promote_price = calc_price(td.price, False,
-                                   self.trade_config.promote_scale)
-        if td.has_islp:
-            return
-        else:
-            if (td.p_stage == 0 and price <= promote_price):
-                td.slp = calc_price(td.price, False,
-                                    self.trade_config.promote_target)
-                td.p_stage = 1
-                td.slr = '跟踪止盈'
-                td.has_islp = True
-                self.dbservice.update_tsi(self.tsi, self.get_current_date())
-                logger.debug(log_str.format(
-                    trade_time, price,
-                    self.trade_config.promote_scale, td.slp))
 
     def get_profit_status(self, dk) -> bool:
         '''返回是否满足止盈条件。当第一次符合止盈条件时，设置相关止盈参数
@@ -301,30 +299,6 @@ class TradeUtilsLong(TradeUtils):
         price = self.get_current_price()
         td = self.tsi.trade_data
         return price <= td.slp
-
-    def try_improve_sl_price(self) -> bool:
-        td = self.tsi.trade_data
-        logger = self.logger
-        price = self.get_current_price()
-        trade_time = self.get_current_date_str()
-        log_str = '{}<做多>止盈条件{}现价{}达到1:{}盈亏比,将止损价提高至{}'
-        calc_price = self.calc_price
-        if td.has_islp:
-            return
-        else:
-            if td.p_cond in [1, 2, 3]:
-                standard_price = calc_price(td.price, True,
-                                            self.trade_config.promote_scale_1)
-                if price >= standard_price:
-                    td.slp = calc_price(td.price, True,
-                                        self.trade_config.promote_target_1)
-                    td.slr = '跟踪止盈'
-                    td.has_islp = True
-                    self.dbservice.update_tsi(self.tsi,
-                                              self.get_current_date())
-                    logger.debug(log_str.format(
-                        trade_time, 1, price,
-                        self.trade_config.promote_scale_1, td.slp))
 
     def get_profit_status(self) -> int:
         '''返回满足止盈条件的序号，并设置相关止盈参数

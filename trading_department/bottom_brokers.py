@@ -88,12 +88,10 @@ class BottomTradeBrokerManager:
         '''
         if self.tud.is_backtest:
             # 只有在回测中需要用到以下逻辑
-            # 当天交易结束时即17:59:59，会触发以下条件，
+            # 当天交易结束时即14:59:59，会触发以下条件，
             if self._is_changing(1):
                 self._close_operation()
-        if not self._has_traded:
-            self._try_trade()
-            self._has_traded = True
+        self._try_trade()
 
     def _close_operation(self):
         '''收盘后将必要的数据重置，
@@ -102,7 +100,6 @@ class BottomTradeBrokerManager:
         logger = self.logger
         log_str = '{} {} 交易结束'
         self._calc_indicators(0)
-        self._has_traded = False
         if self._long_ftu:
             self._long_ftu.trading_close_operation()
         if self._short_ftu:
@@ -125,7 +122,7 @@ class BottomTradeBrokerManager:
         * 开始交易前检查期货是否需要换月
         * 跟踪交易信号，当满足条件时进行交易
         '''
-        # self._daily_check_task()
+        self._daily_check_task()
         self._trade()
 
 
@@ -208,7 +205,7 @@ class BottomTradeShortBroker:
             ts = self._api.get_trading_status(symbol)
             if not self._trade_checked and ts.trade_status == "CONTINOUS":
                 self._trade_checked = True
-                logger.info(log_str.format(
+                logger.debug(log_str.format(
                     get_date_str(self._zl_quote.datetime),
                     self._get_symbol(),
                     self.trade._utils.tsi.custom_symbol
@@ -218,7 +215,7 @@ class BottomTradeShortBroker:
         else:
             if not self._trade_checked:
                 self._trade_checked = True
-                logger.info(log_str.format(
+                logger.debug(log_str.format(
                     get_date_str(self._zl_quote.datetime),
                     self._get_symbol(),
                     self.trade._utils.tsi.custom_symbol
@@ -253,7 +250,7 @@ class BottomTradeShortBroker:
                 if self._need_switch_contract():
                     self.switch_trade()
                 self._daily_checked = True
-                logger.info(log_str.format(
+                logger.debug(log_str.format(
                     get_date_str(self._zl_quote.datetime),
                     self._get_symbol(),
                     self.trade._utils.tsi.custom_symbol
@@ -264,7 +261,7 @@ class BottomTradeShortBroker:
                 if self._need_switch_contract():
                     self.switch_trade()
                 self._daily_checked = True
-                logger.info(log_str.format(
+                logger.debug(log_str.format(
                     get_date_str(self._zl_quote.datetime),
                     self._get_symbol(),
                     self.trade._utils.tsi.custom_symbol
@@ -273,6 +270,7 @@ class BottomTradeShortBroker:
     def trading_close_operation(self) -> None:
         self._daily_checked = False
         self._trade_checked = False
+        self.trade.close_operation()
 
 
 class BottomTradeLongBroker(BottomTradeShortBroker):

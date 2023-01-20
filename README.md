@@ -73,7 +73,7 @@ python main.py
 
 4. 将回测数据导出到Excel表中
 
-    `python generate_excel.py -n fa9bd35c-d99f-4296-b884-3322c0defb46 -p 27016`
+    `python generate_excel.py -p 26016 -n fa9bd35c-d99f-4296-b884-3322c0defb46`
 
     * `-p, --port`: 默认值：27017, 指定数据库端口号
     * `-l, --host`: 默认值：localhost, 指定数据库地址
