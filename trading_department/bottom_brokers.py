@@ -125,6 +125,12 @@ class BottomTradeBrokerManager:
         self._daily_check_task()
         self._trade()
 
+    def before_open_operation(self) -> None:
+        if self._long_ftu:
+            self._long_ftu.before_open_operation()
+        if self._short_ftu:
+            self._short_ftu.before_open_operation()
+
 
 class BottomTradeShortBroker:
     logger = LoggerGetter()
@@ -271,6 +277,9 @@ class BottomTradeShortBroker:
         self._daily_checked = False
         self._trade_checked = False
         self.trade.close_operation()
+
+    def before_open_operation(self) -> None:
+        self.trade.before_open_operation()
 
 
 class BottomTradeLongBroker(BottomTradeShortBroker):

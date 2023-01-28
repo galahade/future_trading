@@ -1,5 +1,5 @@
-from datetime import date
-from tqsdk import TqApi, TqAuth, TqBacktest, BacktestFinished, tafunc
+# from datetime import date
+from tqsdk import TqApi, TqAuth,  BacktestFinished, tafunc
 from utils.bottom_trade_tools import get_date_str
 from datetime import datetime
 
@@ -24,14 +24,17 @@ def _getLastDayLastM30Kline():
     return m30_klines[m30_klines.datetime <= l_timestamp].iloc[-1]
 
 
-api = TqApi(backtest=TqBacktest(start_dt=date(2020, 1, 1),
-                                end_dt=date(2020, 1, 5)),
-            auth=TqAuth("galahade", "211212"))
+# api = TqApi(backtest=TqBacktest(start_dt=date(2020, 1, 1),
+#                                 end_dt=date(2020, 1, 5)),
+#             auth=TqAuth("galahade", "211212"))
+api = TqApi(auth=TqAuth("galahade", "211212"))
 quote = api.get_quote("KQ.m@DCE.i")
 symbol = "SHFE.rb2005"
 klines = api.get_kline_serial(symbol, 60*60*24)
 h3_klines = api.get_kline_serial(symbol, 60*60*3)
 m30_klines = api.get_kline_serial(symbol, 60*30)
+print(api.get_trading_status(symbol).trade_status)
+print(klines)
 try:
     while True:
         api.wait_update()

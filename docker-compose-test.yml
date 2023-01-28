@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   app:
-    image: galahade/bottom-future-trade-test:v2.0
+    image: galahade/bottom-future-trade-test:v0.1
     working_dir: /app
     volumes:
       - bottom-future-trade-log-data:/log
@@ -20,7 +20,7 @@ services:
   mongo:
     image: mongo
     ports:
-      - 27019:27017
+      - 26019:26017
     volumes:
       - bottom-trade-mongo-test-data:/data/db
     environment:

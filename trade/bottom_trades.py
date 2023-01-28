@@ -37,11 +37,14 @@ class FutureTrade:
         self._is_short_macd_match = False
         self._has_traded = False
 
-    def _calc_open_pos_number(self) -> bool:
+    def _calc_open_pos(self, price) -> int:
         utils = self._utils
         available = utils.account.balance * utils.open_pos_scale
-        pos = floor(available / utils.quote.bid_price1)
+        pos = floor(available / price)
         return pos
+
+    def _calc_open_pos_number(self) -> int:
+        return self._calc_open_pos(self._utils.quote.bid_price1)
 
     def _can_open_ops(self):
         logger = self.logger
@@ -126,28 +129,17 @@ class FutureTrade:
         elif self._has_traded:
             is_match = False
         elif utils.get_pos():
-            ts = self._utils
-            log_str = '{} {} {} 已持仓，仓位:{}手，价格:{}, 止损价:{}'
-            tsi = ts.tsi
-            logger.info(log_str.format(
-                ts.get_current_date_str(),
-                ts.tsi.current_symbol,
-                tsi.custom_symbol,
-                tsi.trade_data.pos,
-                tsi.trade_data.price,
-                tsi.trade_data.slp,
-            ))
             is_match = True
         elif self._can_open_ops():
-            logger = self.logger
-            log_str = '{} {} <多空> 开仓 开仓价:{} {}手'
+            log_str = '{} {} {} 开仓 开仓价:{} {}手'
             open_pos = self._calc_open_pos_number()
             self._trade_pos(open_pos, 0)
             utils.set_open_info(open_pos)
             trade_time = utils.get_current_date_str()
             open_pos = utils.get_pos()
             content = log_str.format(
-                trade_time, utils.tsi.current_symbol, td.price, open_pos)
+                trade_time, utils.tsi.current_symbol,
+                utils.tsi.custom_symbol, td.price, open_pos)
             logger.info(content)
             is_match = True
         self._has_traded = True
@@ -173,6 +165,88 @@ class FutureTrade:
     def _has_checked(self, kline, test_name) -> bool:
         return (kline.get(test_name, default=-1) != -1
                 and not (np.isnan(kline[test_name])))
+
+    def _getLastTradeDate(self) -> datetime:
+        d_kline = self._get_last_dk_line()
+        dk_time = tafunc.time_to_datetime(d_kline.datetime)
+        return datetime(dk_time.year, dk_time.month, dk_time.day)
+
+    def _getLastDayLastH3Kline(self):
+        last_trade_date = self._getLastTradeDate()
+        h3_klines = self._h3_klines
+        lastday_lasth3k_time = last_trade_date.replace(hour=12)
+        l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
+        return h3_klines[h3_klines.datetime <= l_timestamp].iloc[-1]
+
+    def _getLastDayLastM30Kline(self):
+        last_trade_date = self._getLastTradeDate()
+        m30_klines = self._m30_klines
+        lastday_lasth3k_time = last_trade_date.replace(hour=14, minute=30)
+        l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
+        return m30_klines[m30_klines.datetime <= l_timestamp].iloc[-1]
+
+    def _is_within_distance(self, m30_kline, is_macd_match) -> bool:
+        logger = self.logger
+        utils = self._utils
+        trade_time = utils.get_current_date_str()
+        log_str = ('{} {} 前一交易日最后30分钟线时间:{},满足条件的30分'
+                   '钟线时间{},满足条件前一根30分钟线ema5:{},ema60:{},close:{}.')
+        m30_klines = self._m30_klines
+        m30_klines = m30_klines[
+            m30_klines.datetime < m30_kline.datetime].iloc[::-1]
+        wanted_kline = m30_klines.iloc[-10]
+        distance = 5
+        is_match = False
+        for i, t_kline in m30_klines.iterrows():
+            e5, _, e60, _, close, _, _ =\
+                self.get_Kline_values(t_kline)
+            if close <= e60 or e5 <= e60:
+                wanted_kline = self._m30_klines.iloc[i+1]
+                content = log_str.format(
+                    trade_time, utils.tsi.current_symbol,
+                    get_date_str(m30_kline.datetime),
+                    get_date_str(wanted_kline.datetime),
+                    e5, e60, close)
+                logger.debug(content)
+                break
+        if is_macd_match:
+            last_date = tafunc.time_to_datetime(m30_kline.datetime)
+            last_date = datetime(
+                last_date.year, last_date.month, last_date.day, 21)
+            lastdate_timestamp = tafunc.time_to_ns_timestamp(
+                last_date + timedelta(days=-1))
+            if lastdate_timestamp <= wanted_kline.datetime:
+                logger.debug('前一交易日MACD > 0, '
+                             f'开始时间:{get_date_str(lastdate_timestamp)},'
+                             f'满足条件30分钟线时间:'
+                             f'{get_date_str(wanted_kline.datetime)}'
+                             '符合在同一交易日的条件')
+                is_match = True
+        else:
+            if m30_kline.id - wanted_kline.id < distance:
+                logger.debug(f'上一交易日30分钟线id:{m30_kline.id},'
+                             f'满足条件的30分钟线id:{wanted_kline.id}'
+                             '满足距离小于5的条件')
+                is_match = True
+        return is_match
+
+    def _check_openpos_situation(self):
+        logger = self.logger
+        ts = self._utils
+        if ts.get_pos():
+            log_open = '{} {} {} 已持仓，仓位:{}手，价格:{}, 止损价:{}'
+            tsi = ts.tsi
+            logger.info(log_open.format(
+                ts.get_current_date_str(),
+                ts.tsi.current_symbol,
+                tsi.custom_symbol,
+                tsi.trade_data.pos,
+                tsi.trade_data.price,
+                tsi.trade_data.slp,
+            ))
+
+    def close_operation(self):
+        self._has_traded = False
 
     def get_Kline_values(self, kline) -> tuple:
         ema5 = kline.ema5
@@ -251,72 +325,22 @@ class FutureTrade:
             utils.update_tsi()
         return self.create_new_one()
 
-    def _getLastTradeDate(self) -> datetime:
-        d_kline = self._get_last_dk_line()
-        dk_time = tafunc.time_to_datetime(d_kline.datetime)
-        return datetime(dk_time.year, dk_time.month, dk_time.day)
-
-    def _getLastDayLastH3Kline(self):
-        last_trade_date = self._getLastTradeDate()
-        h3_klines = self._h3_klines
-        lastday_lasth3k_time = last_trade_date.replace(hour=12)
-        l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
-        return h3_klines[h3_klines.datetime <= l_timestamp].iloc[-1]
-
-    def _getLastDayLastM30Kline(self):
-        last_trade_date = self._getLastTradeDate()
-        m30_klines = self._m30_klines
-        lastday_lasth3k_time = last_trade_date.replace(hour=14, minute=30)
-        l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
-        return m30_klines[m30_klines.datetime <= l_timestamp].iloc[-1]
-
-    def _is_within_distance(self, m30_kline, is_macd_match) -> bool:
+    def before_open_operation(self):
+        '''每次程序运行执行一次，用来检查当天是否有需要开仓的品种
+        '''
         logger = self.logger
         utils = self._utils
-        trade_time = utils.get_current_date_str()
-        log_str = ('{} {} 前一交易日最后30分钟线时间:{},满足条件的30分'
-                   '钟线时间{},满足条件前一根30分钟线ema5:{},ema60:{},close:{}.')
-        m30_klines = self._m30_klines
-        m30_klines = m30_klines[
-            m30_klines.datetime < m30_kline.datetime].iloc[::-1]
-        wanted_kline = m30_klines.iloc[-10]
-        distance = 5
-        is_match = False
-        for i, t_kline in m30_klines.iterrows():
-            e5, _, e60, _, close, _, _ =\
-                self.get_Kline_values(t_kline)
-            if close <= e60 or e5 <= e60:
-                wanted_kline = self._m30_klines.iloc[i+1]
-                content = log_str.format(
-                    trade_time, utils.tsi.current_symbol,
-                    get_date_str(m30_kline.datetime),
-                    get_date_str(wanted_kline.datetime),
-                    e5, e60, close)
-                logger.debug(content)
-                break
-        if is_macd_match:
-            last_date = tafunc.time_to_datetime(m30_kline.datetime)
-            last_date = datetime(
-                last_date.year, last_date.month, last_date.day, 21)
-            lastdate_timestamp = tafunc.time_to_ns_timestamp(
-                last_date + timedelta(days=-1))
-            if lastdate_timestamp <= wanted_kline.datetime:
-                logger.debug('前一交易日MACD > 0, '
-                             f'开始时间:{get_date_str(lastdate_timestamp)},'
-                             f'满足条件30分钟线时间:'
-                             f'{get_date_str(wanted_kline.datetime)}'
-                             '符合在同一交易日的条件')
-                is_match = True
-        else:
-            if m30_kline.id - wanted_kline.id < distance:
-                logger.debug(f'上一交易日30分钟线id:{m30_kline.id},'
-                             f'满足条件的30分钟线id:{wanted_kline.id}'
-                             '满足距离小于5的条件')
-                is_match = True
-        return is_match
-
-    def close_operation(self):
-        self._has_traded = False
+        self._check_openpos_situation()
+        if self._can_open_ops():
+            log_str = ('{} {} {} 符合开仓条件, 开盘后注意关注开仓 '
+                       '前一日收盘价:{}, 预计开仓:{} 手')
+            last_price = self._get_last_dk_line().close
+            open_pos = self._calc_open_pos(last_price)
+            trade_time = utils.get_current_date_str()
+            content = log_str.format(
+                trade_time, utils.tsi.current_symbol,
+                utils.tsi.custom_symbol, last_price, open_pos)
+            logger.info(content)
 
 
 class FutureTradeShort(FutureTrade):

@@ -131,8 +131,9 @@ class BottomTradeTool:
             api, fc, self.direction, just_check, self.service, is_backtest)
                     for fc in future_configs]
         logger.debug("准备开始摸底策略交易.")
+        [ftu.before_open_operation() for ftu in ftu_list]
         api.wait_update()
-        logger.debug("天勤服务器端已更新，开始交易日工作")
+        logger.debug("天勤服务器端已更新，开始实盘交易日工作")
 
         while True:
             api.wait_update()
