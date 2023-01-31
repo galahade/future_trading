@@ -123,8 +123,9 @@ class BottomTradeBrokerManager:
         * 开始交易前检查期货是否需要换月
         * 跟踪交易信号，当满足条件时进行交易
         '''
-        self._daily_check_task()
-        self._trade()
+        if not is_not_trading(self._api, self._zl_symbol):
+            self._daily_check_task()
+            self._trade()
 
     def before_open_operation(self) -> None:
         if is_not_trading(self._api, self._zl_symbol):

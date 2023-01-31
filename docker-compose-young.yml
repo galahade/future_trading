@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   app:
-    image: galahade/bottom-trade-young:latest
+    image: galahade/bottom-trade-test:latest
     working_dir: /app
     volumes:
       - bottom-trade-log-data:/log
