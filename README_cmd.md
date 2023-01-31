@@ -1,40 +1,40 @@
-# 构建Docker运行环境
+# 构建运行环境
 
-## 构建Docker Image
+## 构建镜像文件
 
-### 构建开发/回测环境
+### 构建开发/回测镜像
 
 开发过程中，使用以下命令构建运行环境，对代码进行测试
 
 ```
 # Apple M1 build command
-docker buildx build --platform linux/amd64 -t  galahade/future-trade-dev.
+docker buildx build --platform linux/amd64 -t  galahade/bottom-trade-dev.
 # 使用缓存构建image
-docker build --tag galahade/bottom-future-trade-dev .
+docker build --tag galahade/bottom-trade-dev .
 # 不使用缓存，从头构建image
-docker build --no-cache --tag galahade/bottom-future-trade-dev .
+docker build --no-cache --tag galahade/bottom-trade-dev .
 # 构建完成镜像后进行连接测试
-docker run -e TZ=Asia/Shanghai --rm -ti galahade/bottom-future-trade-dev /bin/bash
-docker run --rm -ti galahade/bottom-future-trade-dev /bin/bash
+docker run -e TZ=Asia/Shanghai --rm -ti galahade/bottom-trade-dev /bin/bash
+docker run --rm -ti galahade/bottom-trade-dev /bin/bash
 # 对镜像打标签
-docker tag galahade/bottom-future-trade-dev galahade/bottom-future-trade-dev:v0.1
+docker tag galahade/bottom-trade-dev galahade/bottom-trade-dev:v0.1
 ```
-### 构建测试环境
+### 构建测试镜像
 
 当开发工作完成后，将代码提交到`main`分支，然后构建测试环境，用来监测各品种的开仓情况。
 
 ```
-docker build --tag galahade/bottom-future-trade-test .
-docker tag galahade/bottom-future-trade-test galahade/bottom-future-trade-test:v0.1
+docker build --tag galahade/bottom-trade-test .
+docker tag galahade/bottom-trade-test galahade/bottom-trade-test:v0.1
 ```
 
-### 构建生产环境
+### 构建生产镜像
 
 该环境用来进行实盘交易，需要配置交易信息，以实现自动化交易。
 
 ```
-docker build --tag galahade/bottom-future-trade-prod .
-docker tag galahade/bottom-future-trade-prod galahade/bottom-future-trade-prod:v0.1
+docker build --tag galahade/bottom-trade-prod .
+docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 ```
 
 ### 构建专用环境
@@ -57,39 +57,42 @@ docker tag galahade/bottom-future-trade-prod galahade/bottom-future-trade-prod:v
    docker stack rm bottom-trade-young
    ```
 
-## 部署Docker Image
+## 部署运行环境
 
-以上4个环境均使用 **Docker Swarm** 进行部署。
+运行环境均使用 **Docker Swarm** 进行部署。
 
 在部署前，需要做的准备工作：
 
 ### 创建Docker volume
 
 ```
-docker volume create bottom-future-trade-log-data
+docker volume create bottom-trade-log-data
 # 查看 volume 内容的命令
-docker run -it -v bottom-future-trade-log-data:/log --rm bash:4.4
+docker run -it -v bottom-trade-log-data:/log --rm bash:4.4
 ```
 
 ### 部署 Docker Image
 
 ```
 # 开发环境
-docker stack deploy -c docker-compose.yml bottom-future-trade-dev
-docker stack rm bottom-future-trade-dev
+docker stack deploy -c docker-compose.yml bottom-trade-dev
+docker stack rm bottom-trade-dev
 
 # 回测环境
-docker stack deploy -c docker-compose-backtest.yml bottom-future-trade-backtest
-docker stack rm bottom-future-trade-backtest
+docker stack deploy -c docker-compose-backtest.yml bottom-trade-backtest
+docker stack rm bottom-trade-backtest
 
 # 测试环境
-docker stack deploy -c docker-compose-test.yml bottom-future-trade-test
-docker stack rm bottom-future-trade-test
+docker stack deploy -c docker-compose-test.yml bottom-trade-test
+docker stack rm bottom-trade-test
 
 # 生产环境
-docker stack deploy -c docker-compose-prod.yml bottom-future-trade
-docker stack rm bottom-future-trade
+docker stack deploy -c docker-compose-prod.yml bottom-trade
+docker stack rm bottom-trade
 
+# 特殊环境
+docker stack deploy -c docker-compose-young.yml bottom-trade-young
+docker stack rm bottom-trade-young
 ```
 
 ### 回测环境的使用步骤
@@ -102,7 +105,7 @@ docker stack rm bottom-future-trade
     ```
     docker stack deploy -c docker-compose-backtest.yml bottom-backtest-1
     ```
-3. 记录每个回测环境使用的数据库名称，使用以下命令将结果导出到excel文件。
+3. 在日志中找到并记录每个回测环境使用的数据库名称，使用以下命令将结果导出到excel文件。
     ```
     python generate_excel.py -p 26016 -n DB_NAME 
     ```

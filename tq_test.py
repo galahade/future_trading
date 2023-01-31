@@ -28,13 +28,15 @@ def _getLastDayLastM30Kline():
 #                                 end_dt=date(2020, 1, 5)),
 #             auth=TqAuth("galahade", "211212"))
 api = TqApi(auth=TqAuth("galahade", "211212"))
-quote = api.get_quote("KQ.m@DCE.i")
-symbol = "SHFE.rb2005"
+# quote = api.get_quote("KQ.m@DCE.i")
+quote = api.get_quote("SHFE.rb2305")
+symbol = "SHFE.rb2305"
 klines = api.get_kline_serial(symbol, 60*60*24)
 h3_klines = api.get_kline_serial(symbol, 60*60*3)
 m30_klines = api.get_kline_serial(symbol, 60*30)
-print(api.get_trading_status(symbol).trade_status)
-print(klines)
+# print(api.get_trading_status(symbol).trade_status)
+print(get_date_str(quote.datetime))
+print(get_date_str(klines.iloc[-1].datetime))
 try:
     while True:
         api.wait_update()

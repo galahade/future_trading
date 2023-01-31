@@ -46,13 +46,13 @@ class FutureTrade:
     def _calc_open_pos_number(self) -> int:
         return self._calc_open_pos(self._utils.quote.bid_price1)
 
-    def _can_open_ops(self):
+    def _can_open_ops(self, is_predicted=False):
         logger = self.logger
         is_match = False
         if self._utils.get_pos() == 0:
-            if self._match_dk_cond():
-                if self._match_3hk_cond():
-                    if self._match_30mk_cond():
+            if self._match_dk_cond(is_predicted):
+                if self._match_3hk_cond(is_predicted):
+                    if self._match_30mk_cond(is_predicted):
                         logger.info(
                             '-----------满足开仓条件，准备开仓-------------')
                         is_match = True
@@ -151,8 +151,11 @@ class FutureTrade:
         self._try_stop_loss()
         # self._try_stop_profit()
 
-    def _get_last_dk_line(self):
-        return self._daily_klines.iloc[-2]
+    def _get_last_dk_line(self, is_predicted=False):
+        if is_predicted:
+            return self._daily_klines.iloc[-1]
+        else:
+            return self._daily_klines.iloc[-2]
 
     def _get_last_h3_kline(self):
         kline = self._h3_klines.iloc[-2]
@@ -166,20 +169,20 @@ class FutureTrade:
         return (kline.get(test_name, default=-1) != -1
                 and not (np.isnan(kline[test_name])))
 
-    def _getLastTradeDate(self) -> datetime:
-        d_kline = self._get_last_dk_line()
+    def _getLastTradeDate(self, is_predicted=False) -> datetime:
+        d_kline = self._get_last_dk_line(is_predicted)
         dk_time = tafunc.time_to_datetime(d_kline.datetime)
         return datetime(dk_time.year, dk_time.month, dk_time.day)
 
-    def _getLastDayLastH3Kline(self):
-        last_trade_date = self._getLastTradeDate()
+    def _getLastDayLastH3Kline(self, is_predicted=False):
+        last_trade_date = self._getLastTradeDate(is_predicted)
         h3_klines = self._h3_klines
         lastday_lasth3k_time = last_trade_date.replace(hour=12)
         l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
         return h3_klines[h3_klines.datetime <= l_timestamp].iloc[-1]
 
-    def _getLastDayLastM30Kline(self):
-        last_trade_date = self._getLastTradeDate()
+    def _getLastDayLastM30Kline(self, is_predicted=False):
+        last_trade_date = self._getLastTradeDate(is_predicted)
         m30_klines = self._m30_klines
         lastday_lasth3k_time = last_trade_date.replace(hour=14, minute=30)
         l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
@@ -327,11 +330,14 @@ class FutureTrade:
 
     def before_open_operation(self):
         '''每次程序运行执行一次，用来检查当天是否有需要开仓的品种
+        目前由于天勤只能在临近开盘时产生下一个交易日K线，而该方法需要
+        在收盘后即运行，故其判断开仓使用的日K线有别于开盘后进行交易使用的
+        日K线
         '''
         logger = self.logger
         utils = self._utils
         self._check_openpos_situation()
-        if self._can_open_ops():
+        if self._can_open_ops(is_predicted=True):
             log_str = ('{} {} {} 符合开仓条件, 开盘后注意关注开仓 '
                        '前一日收盘价:{}, 预计开仓:{} 手')
             last_price = self._get_last_dk_line().close
@@ -349,12 +355,12 @@ class FutureTradeShort(FutureTrade):
     def _create_utils(self, account, position, tsi, quote, tud):
         return TradeUtilsShort(account, position, tsi, quote, tud)
 
-    def _match_dk_cond(self) -> bool:
+    def _match_dk_cond(self, is_predicted=False) -> bool:
         '''做空日线条件检测
         合约交易日必须大于等于60天
         '''
         logger = self.logger
-        kline = self._get_last_dk_line()
+        kline = self._get_last_dk_line(is_predicted)
         utils = self._utils
         s = utils.tsi.current_symbol
         e5, e20, e60, macd, close, _, trade_time =\
@@ -372,11 +378,11 @@ class FutureTradeShort(FutureTrade):
             is_match = True
         return is_match
 
-    def _match_3hk_cond(self) -> bool:
+    def _match_3hk_cond(self, is_predicted=False) -> bool:
         '''做空3小时线检测
         '''
         logger = self.logger
-        kline = self._getLastDayLastH3Kline()
+        kline = self._getLastDayLastH3Kline(is_predicted)
         utils = self._utils
         e5, e20, e60, macd, close, open_p, trade_time =\
             self.get_Kline_values(kline)
@@ -390,11 +396,11 @@ class FutureTradeShort(FutureTrade):
             is_match = True
         return is_match
 
-    def _match_30mk_cond(self) -> bool:
+    def _match_30mk_cond(self, is_predicted=False) -> bool:
         '''做空30分钟线检测
         '''
         logger = self.logger
-        kline = self._getLastDayLastM30Kline()
+        kline = self._getLastDayLastM30Kline(is_predicted)
         utils = self._utils
         s = utils.tsi.current_symbol
         e5, e20, e60, macd, close, open_p, trade_time =\
@@ -463,12 +469,12 @@ class FutureTradeLong(FutureTrade):
     def _create_utils(self, account, position, tsi, quote, tud):
         return TradeUtilsLong(account, position, tsi, quote, tud)
 
-    def _match_dk_cond(self) -> bool:
+    def _match_dk_cond(self, is_predicted=False) -> bool:
         '''做多日线条件检测
         合约交易日必须大于等于60天
         '''
         logger = self.logger
-        kline = self._get_last_dk_line()
+        kline = self._get_last_dk_line(is_predicted)
         utils = self._utils
         s = utils.tsi.current_symbol
         e5, e20, e60, macd, close, open_p, trade_time =\
@@ -490,11 +496,11 @@ class FutureTradeLong(FutureTrade):
                 is_match = True
         return is_match
 
-    def _match_3hk_cond(self) -> bool:
+    def _match_3hk_cond(self, is_predicted=False) -> bool:
         '''做多3小时线检测
         '''
         logger = self.logger
-        kline = self._getLastDayLastH3Kline()
+        kline = self._getLastDayLastH3Kline(is_predicted)
         utils = self._utils
         s = utils.tsi.current_symbol
         e5, e20, e60, macd, close, open_p, trade_time =\
@@ -508,11 +514,11 @@ class FutureTradeLong(FutureTrade):
             is_match = True
         return is_match
 
-    def _match_30mk_cond(self) -> bool:
+    def _match_30mk_cond(self, is_predicted=False) -> bool:
         '''做多30分钟线检测
         '''
         logger = self.logger
-        kline = self._getLastDayLastM30Kline()
+        kline = self._getLastDayLastM30Kline(is_predicted)
         utils = self._utils
         s = utils.tsi.current_symbol
         e5, e20, e60, macd, close, open_p, trade_time =\

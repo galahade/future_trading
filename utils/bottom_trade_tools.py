@@ -156,3 +156,14 @@ def is_trading_time(api, symbol):
            or (now_time.hour > 20)):
             result = True
     return result
+
+
+def is_not_trading(api, symbol):
+    now = datetime.now()
+    dkline = api.get_kline_serial(symbol, 60*60*24, 1).iloc[0]
+    k_dt = tafunc.time_to_datetime(dkline.datetime)
+    result = True
+    if (now.day < k_dt.day or
+       (now.hour < 3 and now.day == k_dt.day)):
+        result = False
+    return result
