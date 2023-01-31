@@ -8,6 +8,7 @@ def store_future_config(future_config: FutureConfigInfo) -> None:
     future_config_info = {
         'symbol': future_config.symbol,
         'is_active': future_config.is_active,
+        'open_pos_scale': future_config.open_pos_scale,
         'contract_m': future_config.contract_m,
         'name': future_config.name,
         'switch_days': future_config.switch_days,
@@ -45,7 +46,15 @@ def store_future_config(future_config: FutureConfigInfo) -> None:
 
 def get_future_configs() -> list:
     future_configs = []
+    for fci in db.future_config_infos.find({}):
+        fc = FutureConfigInfo(fci, fci['open_pos_scale'])
+        future_configs.append(fc)
+    return future_configs
+
+
+def get_active_future_configs() -> list:
+    future_configs = []
     for fci in db.future_config_infos.find({'is_active': 1}):
-        fc = FutureConfigInfo(fci, 0.2)
+        fc = FutureConfigInfo(fci, fci['open_pos_scale'])
         future_configs.append(fc)
     return future_configs

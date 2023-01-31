@@ -1,10 +1,10 @@
 version: "3.8"
 services:
   app:
-    image: galahade/bottom-future-trade-test:v0.1
+    image: galahade/bottom-trade-young:latest
     working_dir: /app
     volumes:
-      - bottom-future-trade-log-data:/log
+      - bottom-trade-log-data:/log
     depends_on:
       - mongo
     environment:
@@ -21,15 +21,15 @@ services:
   mongo:
     image: mongo
     ports:
-      - 26019:27017
+      - 26010:27017
     volumes:
-      - bottom-trade-mongo-test-data:/data/db
+      - bottom-trade-mongo-young-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 volumes:
-  bottom-trade-mongo-test-data:
-  bottom-future-trade-log-data:
+  bottom-trade-mongo-young-data:
+  bottom-trade-log-data:
     external: true
 secrets:
   mongo_conf_file:

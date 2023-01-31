@@ -78,5 +78,9 @@ class BottomDBService:
         return fc_dao.get_future_configs()
 
     @staticmethod
+    def get_active_future_configs() -> list:
+        return fc_dao.get_active_future_configs()
+
+    @staticmethod
     def get_all_open_pos_infos() -> list:
         return mdao.get_open_pos_infos()

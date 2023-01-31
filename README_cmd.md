@@ -41,38 +41,21 @@ docker tag galahade/bottom-future-trade-prod galahade/bottom-future-trade-prod:v
 
 当策略为某个专用目的（比如小资金高比例投资）使用时，在开发环境验证完成后，需要对开仓比例等进行专门调整。所以它的使用方式和通用环境有一些区别，具体步骤如下：
 
-1. 在`dev`分支根据使用场景的特有目的对代码进行调整并测试。
-
-2. 将特有目的代码使用`git stash`暂存。
-
-   `git stash push 'specific code for young' `
-
-3. 切换至`main`分支并应用之前的暂存区内内容。
-
-   `git checkout main`&`git pop stash@{2}`
-
-4. 构建专用环境的docker镜像，如：`galahade/young-bottom-trade-test`
+1. 构建专用环境的docker镜像，如：`galahade/bottom-trade-young`
 
    ```
-   docker build --tag galahade/bottom-trade-young-test .
-   docker tag galahade/bottom-trade-young-test galahade/young-bottom-trade-test:v0.1
-   
-   docker build --tag galahade/bottom-trade-young-prod .
-   docker tag galahade/bottom-trade-young-prod galahade/young-bottom-trade-prod:v0.1
-   ```
-   
-5. 将上述镜像打标签并上传至dockerhub
-
-6. 部署该镜像
-
-   ```
-   docker stack deploy -c docker-compose-young.yml young-bottom-trade-test
-   docker stack rm young-bottom-trade-test
+   docker build --tag galahade/bottom-trade-young .
+   docker tag galahade/bottom-trade-young galahade/bottom-trade-young:v0.1
    ```
 
-7. 将最新修改放回暂存区
+2. 将上述镜像打标签并上传至dockerhub
 
-   `git stash push 'specific code for young' `
+3. 部署该镜像
+
+   ```
+   docker stack deploy -c docker-compose-young.yml bottom-trade-young
+   docker stack rm bottom-trade-young
+   ```
 
 ## 部署Docker Image
 

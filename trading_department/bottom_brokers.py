@@ -1,4 +1,4 @@
-from utils.bottom_trade_tools import get_date_str
+from utils.bottom_trade_tools import get_date_str, is_trading_time
 from utils.common import LoggerGetter
 # from tqsdk2 import TqApi, tafunc
 from tqsdk import TqApi, tafunc
@@ -208,15 +208,14 @@ class BottomTradeShortBroker:
         log_str = '{} {} {} 交易开始'
         symbol = self._get_symbol()
         if not self.tud.is_backtest:
-            ts = self._api.get_trading_status(symbol)
-            if not self._trade_checked and ts.trade_status == "CONTINOUS":
+            if not self._trade_checked and is_trading_time(self._api, symbol):
                 self._trade_checked = True
                 logger.debug(log_str.format(
                     get_date_str(self._zl_quote.datetime),
                     self._get_symbol(),
                     self.trade._utils.tsi.custom_symbol
                 ))
-            if ts.trade_status == "CONTINOUS":
+            if is_trading_time(self._api, symbol):
                 self.trade.try_trade()
         else:
             if not self._trade_checked:
@@ -249,9 +248,7 @@ class BottomTradeShortBroker:
         log_str = '{} {} {} 交易日检查任务结束'
         # 只有实盘交易支持查看交易状态的操作
         if not self.tud.is_backtest:
-            ts = self._api.get_trading_status(symbol)
-            if ((ts.trade_status == "AUCTIONORDERING" or
-                 ts.trade_status == "CONTINOUS") and not self._daily_checked):
+            if is_trading_time(self._api, symbol) and not self._daily_checked:
                 self._check_record_nsymbol()
                 if self._need_switch_contract():
                     self.switch_trade()
@@ -279,7 +276,13 @@ class BottomTradeShortBroker:
         self.trade.close_operation()
 
     def before_open_operation(self) -> None:
+        log_str = '{} {} {} 盘前摸底筛选结束'
         self.trade.before_open_operation()
+        self.logger.debug(log_str.format(
+            get_date_str(self._zl_quote.datetime),
+            self._get_symbol(),
+            self.trade._utils.tsi.custom_symbol
+        ))
 
 
 class BottomTradeLongBroker(BottomTradeShortBroker):

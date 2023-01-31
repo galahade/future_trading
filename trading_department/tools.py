@@ -14,6 +14,7 @@ from trading_department.brokers import LongTermTradeBrokerManager
 
 
 ACCOUNT_TYPE = int(os.environ['ACCOUNT_TYPE'])
+ACCOUNT_BALANCE = int(os.getenv('ACCOUNT_BALANCE', '10000000'))
 
 
 def get_logger():
@@ -67,7 +68,7 @@ class AuthTool:
         # password = rohon_conf['rohon']['password']
         # self._rohon_account = TqRohon(td_url, broker_id, app_id, auth_code,
         #                              user_name, password)
-        self._test_account = TqSim()
+        self._test_account = TqSim(init_balance=ACCOUNT_BALANCE)
         self.tq_auth = TqAuth(tq_conf['tq']['user'],
                               tq_conf['tq']['password'])
 
@@ -126,10 +127,14 @@ class BottomTradeTool:
 
     def start_trading(self, api, just_check=False, is_backtest=False):
         logger = self.logger
-        future_configs = self.service.get_future_configs()
+        # 在数据中的全部期货品种
+        logger.debug(f'交易初始资金为{api.get_account().balance}')
         ftu_list = [BottomTradeBrokerManager(
             api, fc, self.direction, just_check, self.service, is_backtest)
-                    for fc in future_configs]
+                    for fc in self.service.get_future_configs()]
+        active_ftu_list = [BottomTradeBrokerManager(
+            api, fc, self.direction, just_check, self.service, is_backtest)
+                    for fc in self.service.get_active_future_configs()]
         logger.debug("准备开始摸底策略交易.")
         [ftu.before_open_operation() for ftu in ftu_list]
         api.wait_update()
@@ -137,5 +142,5 @@ class BottomTradeTool:
 
         while True:
             api.wait_update()
-            for ftu in ftu_list:
+            for ftu in active_ftu_list:
                 ftu.daily_opration()
