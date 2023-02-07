@@ -8,6 +8,7 @@ tqsdk = "*"
 pyyaml = "*"
 pymongo = "*"
 pytz = "*"
+mongoengine = "*"
 
 [dev-packages]
 pytest = "*"

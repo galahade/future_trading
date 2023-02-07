@@ -12,7 +12,7 @@ services:
       TQ_CONF_FILE: /run/secrets/tq_conf_file
       ROHON_CONF_FILE: /run/secrets/rohon_conf_file
       ACCOUNT_TYPE: 0
-      ACCOUNT_BALANCE: 100000
+      ACCOUNT_BALANCE: 200000
       ENV_NAME: test
     secrets:
       - mongo_conf_file

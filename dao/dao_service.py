@@ -1,7 +1,9 @@
 from dao.entity import OpenPosInfo, ClosePosInfo, TradeStatusInfo
 import dao.mongo_dao as mdao
 import dao.future_config_dao as fc_dao
+import dao.condition_dao as c_dao
 from datetime import datetime
+from dao.condition_entity import BottomConditionInfo
 
 
 class DBService:
@@ -47,6 +49,7 @@ class BottomDBService:
     def __init__(self, db):
         mdao.db = db
         fc_dao.db = db
+        c_dao.db = db
 
     @staticmethod
     def store_open_record(opi: OpenPosInfo) -> None:
@@ -84,3 +87,7 @@ class BottomDBService:
     @staticmethod
     def get_all_open_pos_infos() -> list:
         return mdao.get_open_pos_infos()
+
+    @staticmethod
+    def store_condition_info(bci: BottomConditionInfo) -> None:
+        return c_dao.store_bottom_condition_info(bci)

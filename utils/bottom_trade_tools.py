@@ -145,25 +145,27 @@ def is_trading_time(api, symbol):
     '''判断是否在交易时间内的方法，如果购买专业版，可以使用天勤提供的方法判断
     否则，使用简单的时间段进行判断
     '''
-    now_time = datetime.now().time()
     result = False
     try:
         ts = api.get_trading_status(symbol)
         if ts.trade_status == "CONTINOUS":
             result = True
     except Exception:
-        if ((now_time.hour >= 8 and now_time.hour < 15)
-           or (now_time.hour > 20)):
+        now = datetime.now()
+        dkline = api.get_kline_serial(symbol, 60*60*24, 1).iloc[0]
+        k_dt = tafunc.time_to_datetime(dkline.datetime)
+        if (now.day < k_dt.day or
+           (now.hour < 15 and now.day == k_dt.day)):
             result = True
     return result
 
 
-def is_not_trading(api, symbol):
-    now = datetime.now()
-    dkline = api.get_kline_serial(symbol, 60*60*24, 1).iloc[0]
-    k_dt = tafunc.time_to_datetime(dkline.datetime)
-    result = True
-    if (now.day < k_dt.day or
-       (now.hour < 3 and now.day == k_dt.day)):
-        result = False
-    return result
+def get_52060_values(kline) -> tuple:
+    ema5 = kline.ema5
+    ema20 = kline.ema20
+    ema60 = kline.ema60
+    macd = kline['MACD.close']
+    close = kline.close
+    open_p = kline.open
+    kline_time = tafunc.time_to_datetime(kline.datetime)
+    return (ema5, ema20, ema60, macd, close, open_p, kline_time)

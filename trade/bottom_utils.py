@@ -29,6 +29,9 @@ class TradeUtils:
         cpi = self._create_ClosePosInfo(sold_price, sold_pos, sold_reason)
         self.dbservice.store_close_record(cpi)
 
+    def store_condition_info(self, bci):
+        self.dbservice.store_condition_info(bci)
+
     def _set_sale_prices(self, pos: int) -> None:
         '''抽象方法，设置止盈止损价格
         当买入成交后，按成交价格设置目标止损价和止盈起始价

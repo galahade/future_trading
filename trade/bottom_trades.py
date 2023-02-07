@@ -1,4 +1,4 @@
-from math import floor
+from math import ceil
 from tqsdk import TargetPosTask, tafunc
 from utils.bottom_trade_tools import get_date_str, get_date_str_short,\
         diff_two_value, calc_indicator, is_nline
@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from trade.bottom_utils import TradeUtilsLong, TradeUtilsShort, TradeUtils,\
         TradeUtilsData
 from dao.entity import TradeStatusInfo
+from dao.condition_entity import BottomConditionInfo, BottomCommonCondition
 import numpy as np
 
 
@@ -36,11 +37,12 @@ class FutureTrade:
         self._is_long_macd_match = False
         self._is_short_macd_match = False
         self._has_traded = False
+        self.bci = BottomConditionInfo(self._utils.tsi.custom_symbol, symbol)
 
     def _calc_open_pos(self, price) -> int:
         utils = self._utils
         available = utils.account.balance * utils.open_pos_scale
-        pos = floor(available / price)
+        pos = ceil(available / price)
         return pos
 
     def _calc_open_pos_number(self) -> int:
@@ -53,8 +55,12 @@ class FutureTrade:
             if self._match_dk_cond(is_predicted):
                 if self._match_3hk_cond(is_predicted):
                     if self._match_30mk_cond(is_predicted):
-                        logger.info(
-                            '-----------满足开仓条件，准备开仓-------------')
+                        if is_predicted:
+                            logger.info(
+                                '请注意以下开仓提示'.ljust(100, '-'))
+                        else:
+                            logger.info(
+                                '满足开仓条件，准备开仓'.ljust(100, '-'))
                         is_match = True
         return is_match
 
@@ -340,13 +346,18 @@ class FutureTrade:
         if self._can_open_ops(is_predicted=True):
             log_str = ('{} {} {} 符合开仓条件, 开盘后注意关注开仓 '
                        '前一日收盘价:{}, 预计开仓:{} 手')
-            last_price = self._get_last_dk_line().close
-            open_pos = self._calc_open_pos(last_price)
+            bci = self.bci
+            bci.last_price = self._get_last_dk_line(True).close
+            bci.pos = self._calc_open_pos(bci.last_price)
+            bci.balance = utils.account.balance
+            bci.open_pos_scale = utils.tud.future_config.open_pos_scale
+            bci.contract_m = utils.tud.future_config.contract_m
             trade_time = utils.get_current_date_str()
             content = log_str.format(
-                trade_time, utils.tsi.current_symbol,
-                utils.tsi.custom_symbol, last_price, open_pos)
+                trade_time, bci.symbol,
+                bci.custom_symbol, bci.last_price, bci.pos)
             logger.info(content)
+            self._utils.store_condition_info(self.bci)
 
 
 class FutureTradeShort(FutureTrade):
@@ -375,6 +386,7 @@ class FutureTradeShort(FutureTrade):
             content = log_str.format(
                 trade_time, s, daily_k_time, e5, e20, e60, close, macd)
             logger.info(content)
+            self.bci.setDayCByKline(kline)
             is_match = True
         return is_match
 
@@ -393,6 +405,7 @@ class FutureTradeShort(FutureTrade):
             content = log_str.format(
                 trade_time, utils.tsi.current_symbol, kline_time, macd)
             logger.info(content)
+            self.bci.setHoursByKline(kline)
             is_match = True
         return is_match
 
@@ -412,6 +425,7 @@ class FutureTradeShort(FutureTrade):
         if close < e60 and e5 < e60:
             if self._is_within_distance(kline, self._is_short_macd_match):
                 is_match = True
+                self.bci.setMinutesCByKline(kline)
                 content = log_str.format(
                     trade_time, s, kline_time, e5, e20, e60, close, macd)
                 logger.info(content)
@@ -493,6 +507,7 @@ class FutureTradeLong(FutureTrade):
                 content = log_str.format(trade_time, s, daily_k_time,
                                          e5, e20, e60, close, macd)
                 logger.info(content)
+                self.bci.setDayCByKline(kline)
                 is_match = True
         return is_match
 
@@ -511,6 +526,7 @@ class FutureTradeLong(FutureTrade):
         if macd > 0:
             content = log_str.format(trade_time, s, kline_time, macd)
             logger.info(content)
+            self.bci.setHoursByKline(kline)
             is_match = True
         return is_match
 
@@ -530,6 +546,7 @@ class FutureTradeLong(FutureTrade):
         if close > e60 and e5 > e60:
             if self._is_within_distance(kline, self._is_long_macd_match):
                 is_match = True
+                self.bci.setMinutesCByKline(kline)
                 content = log_str.format(
                     trade_time, s, kline_time, e5, e20, e60, close, macd)
                 logger.info(content)

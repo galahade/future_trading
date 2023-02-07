@@ -1,5 +1,4 @@
-from utils.bottom_trade_tools import get_date_str, is_trading_time,\
-        is_not_trading
+from utils.bottom_trade_tools import get_date_str, is_trading_time
 from utils.common import LoggerGetter
 # from tqsdk2 import TqApi, tafunc
 from tqsdk import TqApi, tafunc
@@ -123,12 +122,12 @@ class BottomTradeBrokerManager:
         * 开始交易前检查期货是否需要换月
         * 跟踪交易信号，当满足条件时进行交易
         '''
-        if not is_not_trading(self._api, self._zl_symbol):
+        if is_trading_time(self._api, self._zl_symbol):
             self._daily_check_task()
             self._trade()
 
     def before_open_operation(self) -> None:
-        if is_not_trading(self._api, self._zl_symbol):
+        if not is_trading_time(self._api, self._zl_symbol):
             if self._long_ftu:
                 self._long_ftu.before_open_operation()
             if self._short_ftu:
