@@ -54,7 +54,8 @@ def get_future_configs() -> list:
 
 def get_active_future_configs() -> list:
     future_configs = []
-    for fci in db.future_config_infos.find({'is_active': 1}):
+    for fci in db.future_config_infos.find(
+         {'$or': [{'is_active': 1}, {'is_active': True}]}):
         fc = FutureConfigInfo(fci, fci['open_pos_scale'])
         future_configs.append(fc)
     return future_configs

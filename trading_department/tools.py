@@ -137,6 +137,9 @@ class BottomTradeTool:
                     for fc in self.service.get_active_future_configs()]
         logger.debug("准备开始摸底策略交易.")
         [ftu.before_open_operation() for ftu in ftu_list]
+        logger.info('当前参与交易品种为:')
+        for ftu in active_ftu_list:
+            logger.info(f'{ftu._zl_symbol}')
         api.wait_update()
         logger.debug("天勤服务器端已更新，开始实盘交易日工作")
 
