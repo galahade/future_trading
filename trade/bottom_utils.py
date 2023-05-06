@@ -1,9 +1,9 @@
 from tqsdk import tafunc, TqApi
 # from tqsdk2 import tafunc
-from utils.tools import get_date_str
+from utils.tqsdk_tools import get_date_str
 from utils.common import LoggerGetter
 from dao.entity import OpenPosInfo, ClosePosInfo
-from dao.config_entity import FutureConfigInfo
+from dao.config_entity_old import FutureConfigInfo
 from dao.dao_service import DBService
 from datetime import datetime
 

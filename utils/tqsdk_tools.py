@@ -1,25 +1,9 @@
-import logging
 import re
+import logging
 from tqsdk.ta import EMA, MACD
 from tqsdk import tafunc
-from datetime import datetime
-import yaml
-import requests
 
-
-def send_msg(title: str, content: str) -> None:
-    ''' 使用 Server Chan 发送相关消息。
-    参考地址：https://sct.ftqq.com/after
-    '''
-    logger = get_logger()
-    send_key = 'SCT172591Tn14G9JYc890AUJyvsNUiuCcL'
-    url = f'https://sctapi.ftqq.com/{send_key}.send'
-    headers = {"content-type": "application/x-www-form-urlencoded"}
-    data = {'title': title, 'channel': 9, 'desp': content}
-    try:
-        requests.post(url, data=data, headers=headers)
-    except Exception as e:
-        logger.exception(e)
+from utils.common_tools import get_china_date_from_dt
 
 
 def get_date_str(float_value):
@@ -32,6 +16,14 @@ def get_date_str_short(float_value):
     return tafunc.time_to_datetime(float_value).strftime("%Y-%m-%d")
 
 
+def _get_datetime_from_ns(ns):
+    return tafunc.time_to_datetime(ns)
+
+
+def get_chinadt_from_ns(ns):
+    return get_china_date_from_dt(_get_datetime_from_ns(ns))
+
+
 def calc_date_delta(before_value, after_value):
     before = tafunc.time_to_datetime(before_value)
     after = tafunc.time_to_datetime(after_value)
@@ -42,10 +34,6 @@ def calc_date_delta(before_value, after_value):
 def is_zhulian_symbol(_symbol):
     pattern = re.compile(r'^(KQ.m@)(CFFEX|CZCE|DCE|INE|SHFE).(\w{1,2})$')
     return pattern.match(_symbol)
-
-
-def get_date_from_kline(kline):
-    return datetime.fromtimestamp(kline.datetime/1e9)
 
 
 def calc_ema9(klines):
@@ -125,17 +113,3 @@ def is_decline_2p(kline, l_kline) -> bool:
 
 def get_logger():
     return logging.getLogger(__name__)
-
-
-def get_yaml_config(path: str) -> dict:
-    with open(path, 'r') as f:
-        yaml_config = yaml.safe_load(f.read())
-        return yaml_config
-
-
-def get_date_from_symbol(symbol_last_part):
-    temp = int(symbol_last_part)
-    year = int(temp / 100) + 2000
-    month = temp % 100
-    day = 1
-    return datetime(year, month, day, 0, 0, 0)

@@ -1,4 +1,4 @@
-from utils.tools import get_date_str
+from utils.tqsdk_tools import get_date_str
 from utils.common import LoggerGetter
 # from tqsdk2 import TqApi, tafunc
 from tqsdk import TqApi, tafunc

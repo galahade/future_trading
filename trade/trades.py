@@ -1,7 +1,7 @@
 from math import floor
 # from tqsdk2 import TqApi, TargetPosTask, tafunc
 from tqsdk import TargetPosTask, tafunc
-from utils.tools import get_date_str, get_date_str_short, diff_two_value,\
+from utils.tqsdk_tools import get_date_str, get_date_str_short, diff_two_value,\
         calc_indicator, is_nline
 from utils.common import LoggerGetter
 from datetime import datetime, timedelta

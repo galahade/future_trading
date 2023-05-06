@@ -1,6 +1,6 @@
 from pymongo.database import Database
 import hashlib
-from dao.condition_entity import BottomConditionInfo
+from dao.condition_entity_old import BottomConditionInfo
 
 
 db: Database = None

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from trade.bottom_utils import TradeUtilsLong, TradeUtilsShort, TradeUtils,\
         TradeUtilsData
 from dao.entity import TradeStatusInfo
-from dao.condition_entity import BottomConditionInfo, BottomCommonCondition
+from dao.condition_entity_old import BottomConditionInfo
 import numpy as np
 
 

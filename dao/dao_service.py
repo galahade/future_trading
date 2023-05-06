@@ -1,9 +1,9 @@
 from dao.entity import OpenPosInfo, ClosePosInfo, TradeStatusInfo
 import dao.mongo_dao as mdao
 import dao.future_config_dao as fc_dao
-import dao.condition_dao as c_dao
+import dao.condition_dao_old as c_dao
 from datetime import datetime
-from dao.condition_entity import BottomConditionInfo
+from dao.condition_entity_old import BottomConditionInfo
 
 
 class DBService:

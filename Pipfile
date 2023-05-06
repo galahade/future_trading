@@ -7,8 +7,8 @@ name = "pypi"
 tqsdk = "*"
 pyyaml = "*"
 pymongo = "*"
-pytz = "*"
 mongoengine = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"

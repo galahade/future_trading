@@ -1,5 +1,5 @@
 from pymongo.database import Database
-from dao.config_entity import FutureConfigInfo
+from dao.config_entity_old import FutureConfigInfo
 
 db: Database = None
 

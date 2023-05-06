@@ -1,7 +1,7 @@
 import os
 from tqsdk import TqAuth, TqSim
 # from tqsdk2 import TqRohon, TqAuth, TqSim
-from utils.tools import get_yaml_config
+from utils.tqsdk_tools import get_yaml_config
 from utils.common import LoggerGetter
 from utils.future_config_utils import prepare_future_configs
 from pymongo import MongoClient

@@ -1,4 +1,5 @@
-from pypushdeer import PushDeer
+from utils.common_tools import get_yaml_config
 
-pushdeer = PushDeer(pushkey="PDU20698TlxSMEvj1J9nRIMI2xG21HRnwu6K7wwuO")
-pushdeer.send_markdown("# 做多开仓1手", desp="**开仓测试** 使用PushDeer")
+
+config = get_yaml_config('secrets/system_config.yaml')
+print(config['trade']['backtest_days']['start_date'])

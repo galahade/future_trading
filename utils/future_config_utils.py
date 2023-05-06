@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from dao.config_entity import FutureConfigInfo
+from dao.config_entity_old import FutureConfigInfo
 import dao.future_config_dao as dao
 import yaml
 import logging
