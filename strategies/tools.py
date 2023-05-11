@@ -3,6 +3,32 @@ import numpy as np
 from pandas import Series
 from tqsdk.ta import EMA, MACD
 from tqsdk import tafunc
+from pypushdeer import PushDeer
+import utils.tqsdk_tools as tq_tools
+
+
+pushdeer = PushDeer(pushkey="PDU20739T7ZemNBLmqiMV8CYNKUm665tYsoAshLKo")
+
+
+def sendTradePosMsg(custom_symbol: str, symbol: str, direction: bool, pos: int,
+                    price: float, t_time: str):
+    if direction:
+        dir_str = '开仓'
+    else:
+        dir_str = '平仓'
+    title = f'## {custom_symbol} {dir_str}'
+    content = (f'{t_time} **{symbol}** {dir_str} **{pos}** 手，价格 **¥{price}**')
+    sendPushDeerMsg(title, content)
+
+
+def sendSystemStartupMsg(s_time: datetime):
+    title = f'## {tq_tools.get_date_str_short(s_time)} 主策略启动'
+    content = f'启动时间: **{tq_tools.get_date_str(s_time)}**'
+    sendPushDeerMsg(title, content)
+
+
+def sendPushDeerMsg(title: str, content: str):
+    pushdeer.send_markdown(title, desp=content)
 
 
 def fill_macd(klines):
@@ -18,16 +44,25 @@ def fill_macd(klines):
     klines["dea"] = macd["dea"]
 
 
-def fill_indicators(klines):
+def fill_bottom_indicators(klines):
+    '''为K线填充摸底策略指标'''
     fill_macd(klines)
     fill_ema5(klines)
     fill_ema20(klines)
     fill_ema60(klines)
+    # _draw_main_lines(klines)
 
-    # _draw_lines(klines)
+
+def fill_main_indicators(klines):
+    fill_macd(klines)
+    fill_ema9(klines)
+    fill_ema22(klines)
+    fill_ema60(klines)
+
+    # _draw_main_lines(klines)
 
 
-def _draw_lines(klines):
+def _draw_bottom_lines(klines):
     '''当需要视觉效果时使用该方法将指标绘制到K线图上'''
     klines["ema20.board"] = "MAIN"
     klines["ema20.color"] = "red"
@@ -35,7 +70,21 @@ def _draw_lines(klines):
     klines["ema60.color"] = "green"
     klines["ema5.board"] = "MAIN"
     klines["ema5.color"] = "blue"
+    _draw_macd_line(klines)
 
+
+def _draw_main_lines(klines):
+    '''当需要视觉效果时使用该方法将指标绘制到K线图上'''
+    klines["ema22.board"] = "MAIN"
+    klines["ema22.color"] = "red"
+    klines["ema60.board"] = "MAIN"
+    klines["ema60.color"] = "green"
+    klines["ema9.board"] = "MAIN"
+    klines["ema9.color"] = "blue"
+    _draw_macd_line(klines)
+
+
+def _draw_macd_line(klines):
     klines["MACD.board"] = "MACD"
     # 在 board=MACD 上添加 diff、dea 线
     klines["diff.board"] = "MACD"
@@ -49,9 +98,19 @@ def fill_ema5(klines):
     klines["ema5"] = ema.ema
 
 
+def fill_ema9(klines):
+    ema = EMA(klines, 9)
+    klines["ema9"] = ema.ema
+
+
 def fill_ema20(klines):
     ema = EMA(klines, 20)
     klines["ema20"] = ema.ema
+
+
+def fill_ema22(klines):
+    ema22 = EMA(klines, 22)
+    klines["ema22"] = ema22.ema
 
 
 def fill_ema60(klines):
@@ -114,3 +173,9 @@ def has_set_k_attr(kline: Series, attr_value: str) -> bool:
     '''判断K线是否设置了attr_value属性值，如果设置了，返回True，否则返回False'''
     return (kline.get(attr_value) is not None
             and not (np.isnan(kline.attr_value)))
+
+
+def diff_two_value(first: float, second: float) -> float:
+    '''计算两个值的差值，返回差值的绝对值'''
+    return abs(first - second) / second * 100
+

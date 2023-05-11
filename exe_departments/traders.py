@@ -1,12 +1,12 @@
 from abc import abstractmethod
-import stat
 from typing import List
 from tqsdk import TqApi
 from dao.odm.future_config import FutureConfigInfo
 from strategies.cyclical_strategies import CyclicalStrategy
 from strategies.entity import StrategyConfig
 from strategies.symbol_strategies import (
-    MJBottomLongStrategy, MJBottomShortStrategy, MJMainLongStrategy, MJMainShortStrategy, SymbolsStrategies, MJStrategy
+    MJBottomLongStrategy, MJBottomShortStrategy, MJMainLongStrategy,
+    MJMainShortStrategy, MJStrategy
 )
 from utils.common import LoggerGetter
 
@@ -57,10 +57,10 @@ class StrategyTrader:
         self._create_MJ_strategy()
         self.cycle_strategy = CyclicalStrategy(
             self)
-        
+
     def _create_MJ_strategy(self):
         '''根据交易方向类型创建主连策略
- 
+
         交易方向类型决定了策略交易者所拥有的主连方向策略：
         1. 多头策略交易者拥有多头主连策略
         0. 空头策略交易者拥有空头主连策略
@@ -88,7 +88,7 @@ class StrategyTrader:
             ValueError: 目前支持的 sid 只有 1 和 2，其他值会抛出异常,为不支持的策略类型
 
         Returns:
-            SymbolsStrategies: 返回该类的子类实例，如 SymbolsMainStrategies
+            StrategyTrader: 返回该类的子类实例，如 MainStrategyTrader
         """
         s_config = StrategyConfig(api, future_info, direction, is_bt)
         if sid == 1:
@@ -127,15 +127,6 @@ class StrategyTrader:
 class MainStrategyTrader(StrategyTrader):
     '''主力合约交易员'''
 
-    def __init__(self, s_config: StrategyConfig):
-        super().__init__(s_config)
-        self._init_trader()
-
-    def _init_trader(self):
-        '''初始化交易员'''
-        self._trader = SymbolsStrategies.get_strategy_by_id(
-            self._api, self.future_info, self._direction, 0)
-
     def execute_trade(self):
         '''执行交易操作'''
         self._trader.execute_trade()
@@ -160,15 +151,6 @@ class MainStrategyTrader(StrategyTrader):
 
 class BottomStrategyTrader(StrategyTrader):
     '''摸底策略交易员'''
-
-    def __init__(self, s_config: StrategyConfig,):
-        super().__init__(s_config)
-        self._init_trader()
-
-    def _init_trader(self):
-        '''初始化交易员'''
-        self._trader = SymbolsStrategies.get_strategy_by_id(
-            self._api, self.future_info, self._direction, 1)
 
     def execute_trade(self):
         '''执行交易操作'''

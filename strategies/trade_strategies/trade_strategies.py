@@ -1,11 +1,13 @@
+from datetime import datetime
 from math import ceil
 from abc import ABC, abstractmethod
 from tqsdk.objs import Order
 import dao.trade.trade_service as service
 from dao.odm.future_trade import (TradeStatus)
 from strategies.entity import StrategyConfig
-from strategies.tools import fill_indicators
 from utils.common_tools import LoggerGetter, get_china_date_from_str
+import utils.tqsdk_tools as tq_tools
+import strategies.tools as tools
 
 
 class Strategy(ABC):
@@ -31,19 +33,22 @@ class Strategy(ABC):
 class TradeStrategy(Strategy):
     '''交易策略基类'''
 
-    def __init__(self, config: StrategyConfig,
-                 ts: TradeStatus):
+    def __init__(self, config: StrategyConfig, symbol: str):
         super().__init__(config)
-        api = config.api
-        self.ts = ts
-        self.quote = api.get_quote(ts.symbol)
+        self.api = config.api
+        self.ts = self._get_trade_status(symbol)
+        self.quote = self.api.get_quote(symbol)
         self._d_klines = self._get_daily_klines()
-        self._3h_klines = api.get_kline_serial(
-            ts.symbol, self.config.get3hK_Duration(),
+        self._3h_klines = self.api.get_kline_serial(
+            symbol, self.config.get3hK_Duration(),
         )
-        self._30m_klines = api.get_kline_serial(
-            ts.symbol, self.config.get30mK_Duration()
+        self._30m_klines = self.api.get_kline_serial(
+            symbol, self.config.get30mK_Duration()
         )
+
+    def execute_before_trade(self):
+        '''在交易前，执行该方法初始化交易状态'''
+        pass
 
     def execute_trade(self):
         '''在交易期间，循环执行该方法尝试交易,'''
@@ -56,11 +61,34 @@ class TradeStrategy(Strategy):
         pass
 
     def closeout(self, c_type: int, c_message: str) -> Order:
-        '''平仓, 可以安全调用，不会重复平仓'''
+        '''全部平仓, 可以安全调用，不会重复平仓
+
+        c_type: 0: 止损, 1: 止盈, 2: 换月, 3: 人工平仓 
+        '''
+        return self.close_pos(self.ts.carrying_volume, c_type, c_message)
+
+    def open_pos(self, pos: int) -> Order:
+        '''进行开仓相关操作，并记录开仓信息，输出日志'''
+        order = self._trade_pos(pos, 'OPEN')
+        self._set_open_pos_info(order)
+        service.open_pos(self.ts, order)
+        log_str = '{} {} {} 开仓 价格：{} 数量：{}'
+        self.logger.info(log_str.format(
+            tq_tools.get_date_str(self._get_trade_date()),
+            self.ts.symbol, self.ts.custom_symbol, order.trade_price,
+            order.volume_orign))
+        if not self.config.is_backtest:
+            tools.sendTradePosMsg(
+                self.ts.custom_symbol, self.ts.symbol, self._get_direction(),
+                pos, order.trade_price, tq_tools.get_date_str(
+                        order.insert_date_time))
+
+    def close_pos(self, pos: int, c_type, c_message) -> Order:
+        '''根据数量进行平仓，并记录平仓信息，输出日志'''
         order = None
         if self.ts.trade_status == 1:
-            order = self._trade_pos(self.ts.carrying_volume, 'CLOSE')
-            service.close_pos(self.ts, c_type, c_message, order)
+            order = self._trade_pos(pos, 'CLOSE')
+            service.close_ops(self.ts, c_type, c_message, order)
         return order
 
     def _get_daily_klines(self):
@@ -87,6 +115,13 @@ class TradeStrategy(Strategy):
                 break
         return order
 
+    def _calc_price(self, o_price: float, scale: float, is_up: bool) -> float:
+        if is_up:
+            return round(o_price * (1 + self._get_base_scale() * scale), 2)
+        else:
+            return round(o_price * (1 - self._get_base_scale() * scale), 2)
+
+    @abstractmethod
     def _fill_indicators_by_type(self, k_type: int):
         '''根据K线类型填充指标
         0: 全部K线
@@ -94,16 +129,6 @@ class TradeStrategy(Strategy):
         2: 3小时线
         3: 30分钟线
         '''
-        if k_type == 0:
-            self._fill_indicators_by_type(1)
-            self._fill_indicators_by_type(2)
-            self._fill_indicators_by_type(3)
-        elif k_type == 1:
-            fill_indicators(self._d_klines)
-        elif k_type == 2:
-            fill_indicators(self._3h_klines)
-        elif k_type == 3:
-            fill_indicators(self._30m_klines)
 
     def _has_dk_changed(self):
         '''当日线生成新K线时返回True'''
@@ -117,9 +142,13 @@ class TradeStrategy(Strategy):
         '''当30分钟线生成新K线时返回True'''
         return self.api.is_changing(self._30m_klines[-1], 'datetime')
 
-    def _get_trade_date(self):
+    def _get_trade_date(self) -> datetime:
         '''从天勤的报价对象中获取交易的当前时间'''
         return get_china_date_from_str(self.quote.datetime)
+
+    def _get_trade_date_str(self) -> str:
+        '''从天勤的报价对象中获取交易的当前时间'''
+        return self._get_trade_date().strftime("%Y-%m-%d %H:%M:%S")
 
     def _calc_open_pos(self, price) -> int:
         '''计算开仓手数'''
@@ -143,6 +172,21 @@ class TradeStrategy(Strategy):
                 pos = self._calc_open_pos(self.quote.last_price)
                 self.open_pos(pos)
 
+    def _need_before_check(self) -> bool:
+        '''该合约是否需要在盘前检查是否符合开仓条件
+        回测时不需要，实盘时需要
+        '''
+        if self.config.is_backtest:
+            return False
+        return True
+
+    def _set_klines_value(self, klines, k_name, k_key, k_value):
+        klines.loc[k_name, k_key] = k_value
+
+    @abstractmethod
+    def _get_trade_status(self, symbol: str) -> TradeStatus:
+        '''获取交易状态'''
+
     @abstractmethod
     def _get_open_direction(self) -> str:
         '''获取当前交易策略的开仓方向'''
@@ -152,7 +196,7 @@ class TradeStrategy(Strategy):
         '''获取当前交易策略的平仓方向'''
 
     @abstractmethod
-    def _can_open_pos(self) -> bool:
+    def _can_open_pos(self, is_in=True) -> bool:
         '''判断是否可以开仓'''
 
     @abstractmethod
@@ -164,12 +208,33 @@ class TradeStrategy(Strategy):
         '''当满足止盈条件时，进行止盈操作'''
 
     @abstractmethod
-    def open_pos(self, pos: int) -> Order:
-        '''进行开仓相关操作，并记录开仓信息，输出日志'''
+    def _get_direction(self) -> int:
+        '''获取当前交易策略的方向'''
 
     @abstractmethod
-    def close_pos(self, pos: int, c_type, c_message) -> Order:
-        '''根据平仓条件进行平仓，并记录平仓信息，输出日志'''
+    def _set_open_pos_info(self, order: Order):
+        '''设置开仓信息'''
+        self._set_sold_condition(order)
+        self._set_sold_prices(order)
+
+    @abstractmethod
+    def _set_sold_condition(self, order: Order):
+        '''设置平仓条件'''
+
+    @abstractmethod
+    def _set_sold_prices(self, order: Order):
+        '''设置平仓价格'''
+
+    @abstractmethod
+    def _get_base_scale(self):
+        '''获取当前交易策略的基础开仓比例
+
+        开仓比例为开仓资金占总资金的比例
+        '''
+
+    @abstractmethod
+    def _need_stop_loss(self, c_price: float) -> bool:
+        '''是否需要止损'''
 
 
 class LongTradeStrategy(TradeStrategy):
@@ -180,6 +245,15 @@ class LongTradeStrategy(TradeStrategy):
     def _get_close_direction(self) -> str:
         return 'SELL'
 
+    def _get_direction(self) -> int:
+        return 1
+ 
+    def _get_base_scale(self):
+        return self.config.f_info.long_config.base_scale
+
+    def _need_stop_loss(self, c_price: float) -> bool:
+        return c_price <= self.ts.sold_condition.stop_loss_price
+
 
 class ShortTradeStrategy(TradeStrategy):
 
@@ -188,3 +262,12 @@ class ShortTradeStrategy(TradeStrategy):
 
     def _get_close_direction(self) -> str:
         return 'BUY'
+
+    def _get_direction(self) -> int:
+        return 0
+
+    def _get_base_scale(self):
+        return self.config.f_info.short_config.base_scale
+
+    def _need_stop_loss(self, c_price: float) -> bool:
+        return c_price >= self.ts.sold_condition.stop_loss_price

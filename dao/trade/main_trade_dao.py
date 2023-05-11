@@ -3,54 +3,29 @@ from datetime import datetime
 from pandas import DataFrame
 
 from dao.odm.future_trade import (
-    MainCloseVolume, MJSMainStatus, MainIndicatorValues, MainOpenCondition,
+    MainCloseVolume, MainIndicatorValues, MainOpenCondition,
     MainOpenVolume, MainTradeStatus)
 from dao.trade.trade_dao import save_close_volume, save_open_volume
 from utils.common_tools import (
-    get_china_date_from_dt, get_china_tz_now, get_custom_symbol
+    get_china_date_from_dt, get_china_tz_now
 )
 
 
-def getStrategyTradeStatus(custom_symbol: str) -> MJSMainStatus:
-    '''根据主连合约代码返回数据库中该主连合约交易状态状态信息'''
-    return MJSMainStatus.objects(custom_symbol=custom_symbol).first()
+def getTradeStatus(symbol: str, direction: int) -> MainTradeStatus:
+    '''根据自定义合约代码获取交易状态信息'''
+    return MainTradeStatus.objects(symbol=symbol, direction=direction).first()
 
 
-def createStrategyTradeStatus(
-        mj_symbol: str, current_symbol: str, next_symbol: int, direction: int,
-        dt: datetime) -> MJSMainStatus:
-    '''根据传入参数创建主连合约摸底策略交易状态信息并保存到数据库中,
-    参数 direction: 0:多头, 1:空头. '''
-    sts = MJSMainStatus()
-    sts.custom_symbol = get_custom_symbol(mj_symbol, direction, 'main')
-    sts.main_joint_symbol = mj_symbol
-    sts.current_symbol = current_symbol
-    sts.next_symbol = next_symbol
-    sts.direction = direction
-    sts.current_ts = createSymbolTradeStatus(
-        sts.custom_symbol, current_symbol, direction, dt)
-    sts.next_ts = createSymbolTradeStatus(
-        sts.custom_symbol, current_symbol, direction, dt)
-    sts.last_modified = dt
-    sts.save()
-    return sts
-
-
-def createSymbolTradeStatus(
+def createTradeStatus(
         custom_symbol: str, symbol: str, direction: int, dt: datetime
 ) -> MainTradeStatus:
-    sts = MainTradeStatus()
-    sts.custom_symbol = custom_symbol
-    sts.symbol = symbol
-    sts.direction = direction
-    sts.last_modified = dt
-    sts.save()
-    return sts
-
-
-def getSTStatus(symbol: str, direction: int) -> MJSMainStatus:
-    '''根据主连合约代码,合约代码，交易方向返回数据库中该合约交易状态状态信息'''
-    return MJSMainStatus.objects(symbol=symbol, direction=direction).first()
+    ts = MainTradeStatus()
+    ts.custom_symbol = custom_symbol
+    ts.symbol = symbol
+    ts.direction = direction
+    ts.last_modified = dt
+    ts.save()
+    return ts
 
 
 def getOpenVolume(symbol: str, direction: int) -> MainOpenVolume:

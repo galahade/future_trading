@@ -6,7 +6,7 @@ class StrategyConfig:
     '''策略配置'''
     def __init__(self, api: TqApi, f_info: FutureConfigInfo, direction: int,
                  is_backtest: bool = False):
-        self.api = api
+        self.api: TqApi = api
         self.quote = api.get_quote(f_info.symbol)
         self.f_info = f_info
         self.direction = direction
@@ -38,3 +38,9 @@ class StrategyConfig:
 
     def get30mK_Duration(self):
         return 60 * 30
+
+    def get5mK_Duration(self):
+        return 60 * 5
+
+    def setCustomSymbol(self, custom_symbol):
+        self.custom_symbol = custom_symbol

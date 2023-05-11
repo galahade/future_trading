@@ -1,4 +1,3 @@
-from dao.odm.future_trade import MainJointSymbolStatus, TradeStatus
 from exe_departments.traders import StrategyTrader
 from strategies.symbol_strategies import MJStrategy
 

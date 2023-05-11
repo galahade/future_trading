@@ -9,6 +9,7 @@ pyyaml = "*"
 pymongo = "*"
 mongoengine = "*"
 python-dotenv = "*"
+pypushdeer = "*"
 
 [dev-packages]
 pytest = "*"

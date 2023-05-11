@@ -4,7 +4,7 @@ from pandas import DataFrame
 from dao.trade.trade_dao import save_close_volume, save_open_volume
 from dao.odm.future_trade import (
     BottomCloseVolume, BottomIndicatorValues, BottomOpenCondition,
-    BottomOpenVolume, MJSBottomStatus, BottomOpenVolumeTip,
+    BottomOpenVolume, BottomOpenVolumeTip,
     BottomTradeStatus
 )
 from utils.common_tools import (
@@ -12,46 +12,22 @@ from utils.common_tools import (
 )
 
 
-def getStrategyTradeStatus(custom_symbol: str) -> MJSBottomStatus:
-    '''根据主连合约代码返回数据库中该主连合约交易状态状态信息'''
-    return MJSBottomStatus.objects(custom_symbol=custom_symbol).first()
+def getTradeStatus(symbol: str, direction: int) -> BottomTradeStatus:
+    '''根据自定义合约代码获取交易状态信息'''
+    return BottomTradeStatus.objects(
+        symbol=symbol, direction=direction).first()
 
 
-def createStrategyTradeStatus(
-        mj_symbol: str, current_symbol: str, next_symbol: int, direction: int,
-        dt: datetime) -> MJSBottomStatus:
-    '''根据传入参数创建主连合约摸底策略交易状态信息并保存到数据库中,
-    参数 direction: 0:多头, 1:空头. '''
-    sts = MJSBottomStatus()
-    sts.custom_symbol = get_custom_symbol(mj_symbol, direction, 'bottom')
-    sts.main_joint_symbol = mj_symbol
-    sts.current_symbol = current_symbol
-    sts.next_symbol = next_symbol
-    sts.direction = direction
-    sts.current_ts = createSymbolTradeStatus(
-        sts.custom_symbol, current_symbol, direction, dt)
-    sts.next_ts = createSymbolTradeStatus(
-        sts.custom_symbol, current_symbol, direction, dt)
-    sts.last_modified = dt
-    sts.save()
-    return sts
-
-
-def createSymbolTradeStatus(
-        custom_symbol: str, symbol: str, direction: int, dt: datetime
+def createTradeStatus(
+        mj_symbol: str, symbol: str, direction: int, dt: datetime
 ) -> BottomTradeStatus:
     sts = BottomTradeStatus()
-    sts.custom_symbol = custom_symbol
+    sts.custom_symbol = get_custom_symbol(mj_symbol, direction, 'bottom')
     sts.symbol = symbol
     sts.direction = direction
     sts.last_modified = dt
     sts.save()
     return sts
-
-
-def getSTStatus(symbol: str, direction: int) -> MJSBottomStatus:
-    '''根据主连合约代码,合约代码，交易方向返回数据库中该合约交易状态状态信息'''
-    return MJSBottomStatus.objects(symbol=symbol, direction=direction).first()
 
 
 def getOpenVolume(symbol: str, direction: int) -> BottomOpenVolume:
@@ -102,6 +78,12 @@ def createOpenConditon(ocd: dict) -> BottomOpenCondition:
     _fill_ivalues(ocd['3h_kline'], _3h_c)
     _fill_ivalues(ocd['30m_kline'], _30m_c)
     return boc
+
+
+def switch_symbol(ts: BottomTradeStatus, n_symbol: str, dt: datetime):
+    '''重置交易状态信息'''
+    ts.switch_symbol(n_symbol, dt)
+    ts.save()
 
 
 def _fill_ivalues(kline: DataFrame, i_values: BottomIndicatorValues):

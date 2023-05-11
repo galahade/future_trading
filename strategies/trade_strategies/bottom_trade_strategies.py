@@ -2,47 +2,41 @@ from abc import abstractmethod
 from datetime import datetime, timedelta
 from tqsdk import tafunc
 from tqsdk.objs import Order
+from dao.odm.future_trade import BottomIndicatorValues, BottomTradeStatus
+from strategies.entity import StrategyConfig
 import strategies.tools as tools
 import dao.trade.trade_service as service
-from dao.odm.future_trade import BottomTradeStatus
-from strategies.entity import StrategyConfig
 from strategies.trade_strategies.trade_strategies import (
-    LongTradeStrategy, ShortTradeStrategy, TradeStrategy)
+     TradeStrategy, LongTradeStrategy, ShortTradeStrategy
+)
 from utils.common_tools import LoggerGetter
-from utils.tqsdk_tools import (
-    get_date_str, get_date_str_short)
+import utils.tqsdk_tools as tq_tools
 
 
 class BottomTradeStrategy(TradeStrategy):
     logger = LoggerGetter.get_logger()
 
-    def __init__(
-            self, config: StrategyConfig, ts: BottomTradeStatus):
-        super().__init__(config, ts)
+    def __init__(self, config: StrategyConfig, symbol: str):
+        super().__init__(config, symbol)
+        self._fill_indicators_by_type(0)
 
-    def open_pos(self, pos: int) -> Order:
-        '''进行开仓交易，并将交易结果保存至数据库'''
-        order = self._trade_pos(pos, 'OPEN')
-        service.bottom_open_pos_operation(self.ts, order)
-        log_str = '{} {} {} 开仓. 价格：{} 数量：{}'
-        self.logger.info(log_str.format(
-            get_date_str(self._get_trade_date()),
-            self.ts.symbol, self.ts.custom_symbol, order.trade_price,
-            order.volume_orign))
-
-    def close_pos(self, pos: int, c_type, c_message) -> Order:
-        '''平仓'''
-        order = self._trade_pos(pos, 'CLOSE')
-        service.bottom_close_pos_operation(
-            self.ts, order, c_type, c_message)
-
-    def _need_before_check(self) -> bool:
-        '''该合约是否需要在盘前检查是否符合开仓条件
-        回测时不需要，实盘时需要
+    def _fill_indicators_by_type(self, k_type: int):
+        '''根据K线类型填充指标
+        0: 全部K线
+        1: 日线
+        2: 3小时线
+        3: 30分钟线
         '''
-        if self.config.is_backtest:
-            return False
-        return True
+        if k_type == 0:
+            self._fill_indicators_by_type(1)
+            self._fill_indicators_by_type(2)
+            self._fill_indicators_by_type(3)
+        elif k_type == 1:
+            tools.fill_bottom_indicators(self._d_klines)
+        elif k_type == 2:
+            tools.fill_bottom_indicators(self._3h_klines)
+        elif k_type == 3:
+            tools.fill_bottom_indicators(self._30m_klines)
 
     def _can_open_pos(self, is_in=True) -> bool:
         '''是否符合开仓条件
@@ -58,16 +52,16 @@ class BottomTradeStrategy(TradeStrategy):
                         is_match = True
                         if is_in:
                             logger.info(
-                                '符合开仓条件, 准备开仓'.ljust(100, '-'))
+                                '<摸底策略>符合开仓条件, 准备开仓'.ljust(100, '-'))
                         else:
                             logger.info(
-                                '符合开仓条件, 请注意开仓提示'.ljust(100, '-'))
+                                '<摸底策略>符合开仓条件, 请注意开仓提示'.ljust(100, '-'))
         return is_match
 
     def _is_within_distance(self, last_matched_kline, is_macd_matched) -> bool:
         '''30分钟线需要判断与最近符合条件的30分钟线的距离是否在5根以内'''
         logger = self.logger
-        trade_date_str = self._get_trade_date().strftime("%Y-%m-%d %H:%M:%S")
+        trade_date_str = self._get_trade_date_str()
         log_str = ('{} {} 前一交易日最后30分钟线时间:{}, 满足条件的30分'
                    '钟线时间{}, 满足条件前一根30分钟线ema5:{}, ema60:{}, close:{}.')
         m30_klines = self._30m_klines
@@ -77,14 +71,14 @@ class BottomTradeStrategy(TradeStrategy):
         distance = 5
         is_match = False
         for i, t_kline in m30_klines.iterrows():
-            e5, _, e60, _, close, _ =\
+            e5, _, e60, _, close =\
                 self._get_indicators(t_kline)
             if close <= e60 or e5 <= e60:
                 wanted_kline = self._30m_klines.iloc[i+1]
                 content = log_str.format(
                     trade_date_str, self.ts.symbol,
-                    get_date_str(last_matched_kline.datetime),
-                    get_date_str(wanted_kline.datetime),
+                    tq_tools.get_date_str(last_matched_kline.datetime),
+                    tq_tools.get_date_str(wanted_kline.datetime),
                     e5, e60, close)
                 logger.debug(content)
                 break
@@ -95,11 +89,12 @@ class BottomTradeStrategy(TradeStrategy):
             lastdate_timestamp = tafunc.time_to_ns_timestamp(
                 last_date + timedelta(days=-1))
             if lastdate_timestamp <= wanted_kline.datetime:
-                logger.debug('前一交易日MACD > 0, '
-                             f'开始时间:{get_date_str(lastdate_timestamp)},'
-                             f'满足条件30分钟线时间:'
-                             f'{get_date_str(wanted_kline.datetime)}'
-                             '符合在同一交易日的条件')
+                logger.debug(
+                    '前一交易日MACD > 0, '
+                    f'开始时间:{tq_tools.get_date_str(lastdate_timestamp)},'
+                    f'满足条件30分钟线时间:'
+                    f'{tq_tools.get_date_str(wanted_kline.datetime)}'
+                    '符合在同一交易日的条件')
                 is_match = True
         else:
             if last_matched_kline.id - wanted_kline.id < distance:
@@ -110,6 +105,18 @@ class BottomTradeStrategy(TradeStrategy):
         return is_match
 
     def _try_stop_loss(self):
+        logger = self.logger
+        trade_time = self._get_trade_date_str()
+        price = self.quote.last_price
+        log_str = '{} {} {} {} 现价:{},止损价:{},手数:{}'
+        if self._need_stop_loss(price):
+            pos = self.ts.carrying_volume
+            content = log_str.format(
+                trade_time, self.ts.symbol, self.ts.custom_symbol,
+                '止损', price, self.ts.sold_condition.stop_loss_price,
+                pos)
+            logger.info(content)
+            self.closeout(0, '止损')
         pass
 
     def _try_take_profit(self):
@@ -166,15 +173,36 @@ class BottomTradeStrategy(TradeStrategy):
         macd = kline['MACD.close']
         close = kline.close
         trade_time = self._get_trade_date()
-        return (ema5, ema20, ema60, macd, close, trade_time)
+        kline_time_str_short = tq_tools.get_date_str_short(kline.datetime)
+        kline_time_str = tq_tools.get_date_str(kline.datetime)
+        return (ema5, ema20, ema60, macd, close, trade_time,
+                kline_time_str_short, kline_time_str)
+
+    def _get_trade_status(self, symbol: str) -> BottomTradeStatus:
+        '''获取交易状态'''
+        return service.get_bottom_trade_status(
+            self.config.custom_symbol, symbol, self._get_direction(),
+            self.config.quote.datetime)
+
+    def _set_open_condition(
+            self, kline, indiatorValues: BottomIndicatorValues):
+        '''设置开仓条件'''
+        e5, e20, e60, macd, close, trade_time =\
+            self._get_indicators(kline)
+        indiatorValues.ema5 = e5
+        indiatorValues.ema20 = e20
+        indiatorValues.ema60 = e60
+        indiatorValues.macd = macd
+        indiatorValues.close = close
+        indiatorValues.kline_time = trade_time
+
+    def _set_sold_condition(self, order):
+        pass
 
 
 class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
     '''摸底做多交易策略'''
     logger = LoggerGetter.get_logger()
-
-    def __init__(self, s_config: StrategyConfig, ts: BottomTradeStatus):
-        super().__init__(s_config, ts)
 
     def _match_dk_condition(self, is_in=True) -> bool:
         logger = self.logger
@@ -182,23 +210,28 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
         s = self.ts.symbol
-        e5, e20, e60, macd, close, trade_time =\
+        e5, e20, e60, macd, close, trade_time, k_date_str_short =\
             self._get_indicators(kline)
-        k_date_str = get_date_str_short(kline.datetime)
         log_str = ('{} {} <摸底做多> 满足日线 K线时间:{} ema5:{} ema20:{} '
                    'ema60:{} 收盘:{} MACD:{}')
         if e5 < e20 < e60 and close > e5:
             if macd > 0:
-                self._d_klines.loc[kline.name, 'l_macd_matched'] = True
+                self._set_klines_value(
+                    self._d_klines, kline.name, 'l_macd_matched', True)
             else:
-                self._d_klines.loc[kline.name, 'l_macd_matched'] = False
+                self._set_klines_value(
+                    self._d_klines, kline.name, 'l_macd_matched', False)
             content = log_str.format(
-                trade_time, s, k_date_str,
-                e5, e20, e60, close, macd)
+                trade_time, s, k_date_str_short, e5, e20, e60, close, macd)
             logger.info(content)
-            self._d_klines.loc[kline.name, 'l_matched'] = True
+            self._set_klines_value(
+                self._d_klines, kline.name, 'l_matched', True)
+            self._set_open_condition(
+                kline, self.ts.open_condition.daily_condition
+            )
         else:
-            self._d_klines.loc[kline.name, 'l_matched'] = False
+            self._set_klines_value(
+                self._d_klines, kline.name, 'l_matched', False)
         return self._d_klines.loc[kline.name, 'l_matched']
 
     def _match_3h_condition(self, is_in=True) -> bool:
@@ -206,16 +239,20 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
         kline = self._get_last_kline_in_trade(self._3h_klines, is_in)
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
-        _, _, _, macd, _, trade_time = self._get_indicators(kline)
-        k_date_str = get_date_str(kline.datetime)
+        _, _, _, macd, _, trade_time, _, k_date_str =\
+            self._get_indicators(kline)
         log_str = '{} {} <摸底做多> 满足3小时 K线时间:{} MACD:{}'
         if macd > 0:
             content = log_str.format(
                 trade_time, self.ts.symbol, k_date_str, macd)
             logger.info(content)
-            self._3h_klines.loc[kline.name, 'l_matched'] = True
+            self._set_klines_value(
+                self._3h_klines, kline.name, 'l_matched', True)
+            self._set_open_condition(
+                kline, self.ts.open_condition.hourly_condition)
         else:
-            self._3h_klines.loc[kline.name, 'l_matched'] = False
+            self._set_klines_value(
+                self._3h_klines, kline.name, 'l_matched', False)
         return self._3h_klines.loc[kline.name, 'l_matched']
 
     def _match_30m_condition(self, is_in=True) -> bool:
@@ -223,30 +260,44 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
         kline = self._get_last_kline_in_trade(self._30m_klines, is_in)
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
-        e5, e20, e60, macd, close, trade_time =\
+        e5, e20, e60, macd, close, trade_time, k_date_str =\
             self._get_indicators(kline)
-        k_date_str = get_date_str(kline.datetime)
-        log_str = ('{} {} <摸底做多> 30分钟条件 K线时间:{} ema5:{} ema20:{} '
+        log_str = ('{} {} <摸底做多> 满足30分钟条件 K线时间:{} ema5:{} ema20:{} '
                    'ema60:{} 收盘:{} MACD:{}')
         if close > e60 and e5 > e60:
             if self._is_within_distance(kline, self._is_long_macd_match):
-                self._30m_klines.loc[kline.name, 'l_matched'] = True
+                self._set_klines_value(
+                    self._30m_klines, kline.name, 'l_matched', True)
                 content = log_str.format(
                     trade_time, self.ts.symbol, k_date_str, e5, e20, e60,
                     close, macd)
                 logger.info(content)
+                self._set_open_condition(
+                    kline, self.ts.open_condition.minute_30_condition)
             else:
-                self._30m_klines.loc[kline.name, 'l_matched'] = False
+                self._set_klines_value(
+                    self._30m_klines, kline.name, 'l_matched', False)
         else:
-            self._30m_klines.loc[kline.name, 'l_matched'] = False
+            self._set_klines_value(
+                self._30m_klines, kline.name, 'l_matched', False)
         return self._30m_klines.loc[kline.name, 'l_matched']
+
+    def _set_sold_prices(self, order: Order):
+        s_c = self.ts.sold_condition
+        s_c.stop_loss_price = self._calc_price(
+            order.trade_price, self.config.f_info.short_config.stop_loss_scale,
+            False)
+        s_c.tp_started_point = self._calc_price(
+            order.trade_price,
+            self.config.f_info.short_config.profit_start_scale_1,
+            True)
+        self.logger.info(f'{self._get_trade_date_str()}'
+                         f'<做空>开仓价:{order.trade_price}'
+                         f'止损设为:{s_c.stop_loss_price}'
+                         f'止盈起始价为:{s_c.tp_started_point}')
 
 
 class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
-    logger = LoggerGetter.get_logger()
-
-    def __init__(self, s_config: StrategyConfig, ts: BottomTradeStatus):
-        super().__init__(s_config, ts)
 
     def _match_dk_condition(self, is_in=True) -> bool:
         '''做空日线条件检测, 合约交易日必须大于等于60天
@@ -256,22 +307,27 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
         s = self.ts.symbol
-        e5, e20, e60, macd, close, trade_time =\
+        e5, e20, e60, macd, close, trade_time, k_date_str_short =\
             self._get_indicators(kline)
-        k_date_str = get_date_str_short(kline.datetime)
         log_str = ('{} {} <摸底做空> 满足日线 K线时间:{} ema5:{} ema20:{} '
                    'ema60:{} 收盘:{} MACD:{}')
         if e5 > e20 > e60 and close < e5:
             if macd < 0:
-                self._d_klines.loc[kline.name, 's_macd_matched'] = True
+                self._set_klines_value(
+                    self._d_klines, kline.name, 's_macd_matched', True)
             else:
-                self._d_klines.loc[kline.name, 's_macd_matched'] = False
+                self._set_klines_value(
+                    self._d_klines, kline.name, 's_macd_matched', False)
             content = log_str.format(
-                trade_time, s, k_date_str, e5, e20, e60, close, macd)
+                trade_time, s, k_date_str_short, e5, e20, e60, close, macd)
             logger.info(content)
-            self._d_klines.loc[kline.name, 's_matched'] = True
+            self._set_klines_value(
+                self._d_klines, kline.name, 's_matched', True)
+            self._set_open_condition(
+                kline, self.ts.open_condition.daily_condition)
         else:
-            self._d_klines.loc[kline.name, 's_matched'] = False
+            self._set_klines_value(
+                self._d_klines, kline.name, 's_matched', False)
         return self._d_klines.loc[kline.name, 's_matched']
 
     def _match_3h_condition(self, is_in=True) -> bool:
@@ -279,16 +335,20 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         kline = self._get_last_kline_in_trade(self._3h_klines, is_in)
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
-        _, _, _, macd, _, trade_time = self._get_indicators(kline)
-        k_date_str = get_date_str(kline.datetime)
+        _, _, _, macd, _, trade_time, _, k_date_str =\
+            self._get_indicators(kline)
         log_str = '{} {} <摸底做空> 满足3小时 K线时间:{} MACD:{}'
         if macd < 0:
             content = log_str.format(
                 trade_time, self.ts.symbol, k_date_str, macd)
             logger.info(content)
-            self._3h_klines.loc[kline.name, 's_matched'] = True
+            self._set_klines_value(
+                self._3h_klines, kline.name, 's_matched', True)
+            self._set_open_condition(
+                kline, self.ts.open_condition.hourly_condition)
         else:
-            self._3h_klines.loc[kline.name, 's_matched'] = False
+            self._set_klines_value(
+                self._3h_klines, kline.name, 's_matched', False)
         return self._3h_klines.loc[kline.name, 's_matched']
 
     def _match_30m_condition(self, is_in=True) -> bool:
@@ -298,19 +358,37 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
         s = self.ts.symbol
-        e5, e20, e60, macd, close, trade_time =\
+        e5, e20, e60, macd, close, trade_time, _, k_date_str =\
             self._get_indicators(kline)
-        k_date_str = get_date_str(kline.datetime)
         log_str = ('{} {} <摸底做空> 满足30分钟条件 K线时间:{} ema5:{} ema20:{} '
                    'ema60:{} 收盘:{} MACD:{}')
         if close < e60 and e5 < e60:
             if self._is_within_distance(kline, dkline.s_macd_matched):
-                self._30m_klines.loc[kline.name, 's_matched'] = True
+                self._set_klines_value(
+                    self._30m_klines, kline.name, 's_matched', True)
                 content = log_str.format(
                     trade_time, s, k_date_str, e5, e20, e60, close, macd)
                 logger.info(content)
+                self._set_open_condition(
+                    kline, self.ts.open_condition.minute_30_condition)
             else:
-                self._30m_klines.loc[kline.name, 's_matched'] = False
+                self._set_klines_value(
+                    self._30m_klines, kline.name, 's_matched', False)
         else:
-            self._30m_klines.loc[kline.name, 's_matched'] = False
+            self._set_klines_value(
+                self._30m_klines, kline.name, 's_matched', False)
         return self._30m_klines.loc[kline.name, 's_matched']
+
+    def _set_sold_prices(self, order: Order):
+        s_c = self.ts.sold_condition
+        s_c.stop_loss_price = self._calc_price(
+            order.trade_price, self.config.f_info.short_config.stop_loss_scale,
+            True)
+        s_c.tp_started_point = self._calc_price(
+            order.trade_price,
+            self.config.f_info.short_config.profit_start_scale,
+            False)
+        self.logger.info(f'{self._get_trade_date_str()}'
+                         f'<做空>开仓价:{order.trade_price}'
+                         f'止损设为:{s_c.stop_loss_price}'
+                         f'止盈起始价为:{s_c.tp_started_point}')
