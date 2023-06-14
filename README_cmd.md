@@ -6,7 +6,7 @@
 
 开发过程中，使用以下命令构建运行环境，对代码进行测试
 
-```
+```bash
 # Apple M1 build command
 docker buildx build --platform linux/amd64 -t  galahade/bottom-trade-dev.
 # 使用缓存构建image
@@ -19,11 +19,12 @@ docker run --rm -ti galahade/bottom-trade-dev /bin/bash
 # 对镜像打标签
 docker tag galahade/bottom-trade-dev galahade/bottom-trade-dev:v0.1
 ```
+
 ### 构建测试镜像
 
 当开发工作完成后，将代码提交到`main`分支，然后构建测试环境，用来监测各品种的开仓情况。
 
-```
+```bash
 docker build --tag galahade/bottom-trade-test .
 docker tag galahade/bottom-trade-test galahade/bottom-trade-test:v0.1
 ```
@@ -32,7 +33,7 @@ docker tag galahade/bottom-trade-test galahade/bottom-trade-test:v0.1
 
 该环境用来进行实盘交易，需要配置交易信息，以实现自动化交易。
 
-```
+```bash
 docker build --tag galahade/bottom-trade-prod .
 docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 ```
@@ -43,7 +44,7 @@ docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 
 1. 构建专用环境的docker镜像，如：`galahade/bottom-trade-young`
 
-   ```
+   ```bash
    docker build --tag galahade/bottom-trade-young .
    docker tag galahade/bottom-trade-young galahade/bottom-trade-young:v0.1
    ```
@@ -52,7 +53,7 @@ docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 
 3. 部署该镜像
 
-   ```
+   ```bash
    docker stack deploy -c docker-compose-young.yml bottom-trade-young
    docker stack rm bottom-trade-young
    ```
@@ -65,7 +66,7 @@ docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 
 ### 创建Docker volume
 
-```
+```bash
 docker volume create bottom-trade-log-data
 # 查看 volume 内容的命令
 docker run -it -v bottom-trade-log-data:/log --rm bash:4.4
@@ -73,7 +74,7 @@ docker run -it -v bottom-trade-log-data:/log --rm bash:4.4
 
 ### 部署 Docker Image
 
-```
+```bash
 # 开发环境
 docker stack deploy -c docker-compose.yml bottom-trade-dev
 docker stack rm bottom-trade-dev
@@ -98,14 +99,19 @@ docker stack rm bottom-trade-young
 ### 回测环境的使用步骤
 
 1. 首先使用`docker-compose-backtest-db.yml`部署回测数据库主机
-    ```
+
+    ```bash
     docker stack deploy -c docker-compose-backtest-db.yml bottom-backtest-db
     ```
+
 2. 修改`conf/trade_config_backtest.yaml`中需要进行回测的品种的，使用`docker-compose-backtest.yml`加不同名称为每个品种部署回测环境。
-    ```
+
+    ```bash
     docker stack deploy -c docker-compose-backtest.yml bottom-backtest-1
     ```
+
 3. 在日志中找到并记录每个回测环境使用的数据库名称，使用以下命令将结果导出到excel文件。
-    ```
+
+    ```bash
     python generate_excel.py -p 26016 -n DB_NAME 
     ```

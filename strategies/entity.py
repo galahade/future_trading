@@ -7,7 +7,7 @@ class StrategyConfig:
     def __init__(self, api: TqApi, f_info: FutureConfigInfo, direction: int,
                  is_backtest: bool = False):
         self.api: TqApi = api
-        self.quote = api.get_quote(f_info.symbol)
+        self.quote = api.get_quote(f_info.symbol) # type: ignore
         self.f_info = f_info
         self.direction = direction
         self.is_backtest = is_backtest

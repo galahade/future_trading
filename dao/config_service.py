@@ -1,4 +1,4 @@
-from utils.config_utils import SystemConfig
+from utils.config_utils import FutureConfig, SystemConfig
 import dao.odm.trade_config as odm_sc
 import dao.odm.future_config as odm_fc
 import dao.config_dao as dao
@@ -13,7 +13,7 @@ def get_system_config(config: SystemConfig) -> odm_sc.TradeConfigInfo:
     return sc_odm
 
 
-def get_future_configs(configs: list[odm_fc.FutureConfigInfo]
+def get_future_configs(configs: list[FutureConfig]
                        ) -> list[odm_fc.FutureConfigInfo]:
     '''从数据库中读取期货配置信息，如果没有则根据配置文件内容创建
     '''

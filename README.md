@@ -27,7 +27,7 @@
 
 在`Mac_OS`或`Linux`系统中，可以使用命令配置以上环境变量：
 
-```
+```bash
 export MONGO_CONF_FILE=secrets/mongo_conf_file
 export TQ_CONF_FILE=secrets/tq_conf_file
 export ROHON_CONF_FILE=secrets/rohon_conf_file
@@ -65,7 +65,7 @@ exprot ACCOUNT_BALANCE=100000
 
     * `base_scale`: 止盈/损的基本百分比。
     * `stop_loss_scale`: 止损价格在基本百分比上浮动的倍数。
-    * `profit_start_scale `: 开始需要监控止盈的价格在基本百分比上浮动的倍数。
+    * `profit_start_scale`: 开始需要监控止盈的价格在基本百分比上浮动的倍数。
 
     * `promote_scale`: 提高止损的价格在基本百分比上浮动的倍数。
     * `promote_target`: 达到提高止损的价格后，需要将止损价格提高到的价格在基本百分比上浮动的倍数。
@@ -100,13 +100,13 @@ exprot ACCOUNT_BALANCE=100000
      * 1: 做多
      * 2: 多空
 
-2. 实时监测：在交易时段运行，监测实时数据，根据策略进行开仓操作。
+1. 实时监测：在交易时段运行，监测实时数据，根据策略进行开仓操作。
 
-```
+```bash
 python main.py
 ```
 
-3. 导入配置数据: 将期货交易初始配置数据导入数据库中：
+1. 导入配置数据: 将期货交易初始配置数据导入数据库中：
 
     `python init_db.py -p 26018 -l localhost -u root -s example -n bottom_future_trade -c trade_config_young.yaml`
 
@@ -119,7 +119,7 @@ python main.py
     * `-n, --name`: 默认值：future_trade, 指定数据库集合名称
     * `-c, --configfile`: 默认值：trade_config.yaml, 要导入数据库的配置文件名
 
-4. 将回测数据导出到Excel表中
+1. 将回测数据导出到Excel表中
 
     `python generate_excel.py -p 26016 -n fa9bd35c-d99f-4296-b884-3322c0defb46`
 

@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timedelta, timezone
 import logging
+from typing import List, Optional, Union
 import yaml
 import requests
 tz_utc_8 = timezone(timedelta(hours=8))  # 创建时区UTC+8:00，即东八区对应的时区 
@@ -18,7 +19,7 @@ def send_msg(title: str, content: str) -> None:
     try:
         requests.post(url, data=data, headers=headers, timeout=10)
     except requests.RequestException as e:
-        logger.exception(e)
+        logger.exception(e)  # type: ignore
 
 
 def get_custom_symbol(zl_symbol: str, l_or_s: bool, s_name: str) -> str:
@@ -26,7 +27,7 @@ def get_custom_symbol(zl_symbol: str, l_or_s: bool, s_name: str) -> str:
     return f'{symbol_list[1]}_{symbol_list[2]}_{s_name}_{"long" if l_or_s else "short"}'
 
 
-def examine_symbol(_symbol):
+def examine_symbol(_symbol) -> List[str]:
     pattern_dict_normal = {
         'CFFEX': re.compile(r'^(CFFEX).([A-Z]{1,2})(\d{4})$'),
         'CZCE': re.compile(r'^(CZCE).([A-Z]{2})(\d{3})$'),
@@ -34,7 +35,7 @@ def examine_symbol(_symbol):
         'INE': re.compile(r'^(INE).([a-z]{2})(\d{4})$'),
         'SHFE': re.compile(r'^(SHFE).([a-z]{2})(\d{4})$'),
         'KQ.m': re.compile(r'^(KQ.m@)(CFFEX|CZCE|DCE|INE|SHFE).(\w{1,2})$')
-        }
+    }
 
     for _, ipattern in pattern_dict_normal.items():
         matchsymbol = ipattern.match(_symbol)
@@ -43,7 +44,7 @@ def examine_symbol(_symbol):
                 matchsymbol.group(1), matchsymbol.group(2), \
                 matchsymbol.group(3)
             return [exchange, variety, expiry_month]
-    return False
+    raise ValueError(f'Invalid symbol: {_symbol}')
 
 
 def get_zl_symbol(symbol: str) -> str:
@@ -78,9 +79,11 @@ def get_next_symbol(symbol: str, month_list: list[int]) -> str:
     return f'{symbol_list[0]}.{symbol_list[1]}{year}{month:02d}'
 
 
-def get_yaml_config(path: str) -> dict:
-    with open(path, 'r', encoding='UTF-8') as f:
-        return yaml.safe_load(f.read())
+def get_yaml_config(path: str | None) -> dict:
+    if path is not None:
+        with open(path, 'r', encoding='UTF-8') as f:
+            return yaml.safe_load(f.read())
+    raise ValueError('Cant load yaml date from None path')
 
 
 def get_date_from_symbol(symbol_last_part):

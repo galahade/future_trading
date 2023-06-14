@@ -1,44 +1,56 @@
 from datetime import datetime
 import hashlib
+from typing import List
 from pandas import DataFrame
 from dao.trade.trade_dao import save_close_volume, save_open_volume
 from dao.odm.future_trade import (
     BottomCloseVolume, BottomIndicatorValues, BottomOpenCondition,
-    BottomOpenVolume, BottomOpenVolumeTip,
+    BottomOpenVolume, BottomOpenVolumeTip, BottomSoldCondition,
     BottomTradeStatus
 )
 from utils.common_tools import (
-    get_china_date_from_dt, get_china_tz_now, get_custom_symbol
+    get_china_date_from_dt, get_china_tz_now
 )
+
+
+def getBottomOpenVolumeTips() -> List[BottomOpenVolumeTip]:
+    return BottomOpenVolumeTip.objects()
 
 
 def getTradeStatus(symbol: str, direction: int) -> BottomTradeStatus:
     '''根据自定义合约代码获取交易状态信息'''
-    return BottomTradeStatus.objects(
+    return BottomTradeStatus.objects(  # type: ignore
         symbol=symbol, direction=direction).first()
 
 
 def createTradeStatus(
-        mj_symbol: str, symbol: str, direction: int, dt: datetime
+        custom_symbol: str, symbol: str, direction: int, dt: datetime
 ) -> BottomTradeStatus:
-    sts = BottomTradeStatus()
-    sts.custom_symbol = get_custom_symbol(mj_symbol, direction, 'bottom')
-    sts.symbol = symbol
-    sts.direction = direction
-    sts.last_modified = dt
-    sts.save()
-    return sts
+    ts = BottomTradeStatus()
+    ts.custom_symbol = custom_symbol
+    ts.symbol = symbol
+    ts.direction = direction
+    ts.last_modified = dt
+    ts.open_condition = BottomOpenCondition()
+    ts.open_condition.daily_condition = BottomIndicatorValues()
+    ts.open_condition.hourly_condition = BottomIndicatorValues()
+    ts.open_condition.minute_30_condition = BottomIndicatorValues()
+    ts.sold_condition = BottomSoldCondition()
+
+    ts.save()
+    return ts
 
 
 def getOpenVolume(symbol: str, direction: int) -> BottomOpenVolume:
     '''根据主连合约代码,合约代码，交易方向返回数据库中该合约的开仓信息'''
-    return BottomOpenVolume.objects(symbol=symbol, direction=direction).first()
+    return BottomOpenVolume.objects(symbol=symbol, direction=direction).first()  # type: ignore
 
 
-def openPosAndUpdateStatus(ts: BottomTradeStatus, opd: dict
+def openPosAndUpdateStatus(ts: BottomTradeStatus, opd: dict, bovt: BottomOpenVolumeTip
                            ) -> BottomOpenVolume:
     '''保存开仓信息,并更新SymbolStatus中的持仓数量等信息'''
     ov = BottomOpenVolume()
+    ov.tip = bovt
     save_open_volume(ts, opd, ov)
     return ov
 
@@ -51,46 +63,29 @@ def closePosAndUpdateStatus(ts: BottomTradeStatus, cpd: dict
     return cv
 
 
-def createOpenVolumeTip(ts: BottomTradeStatus, ovtd: dict
+def createOpenVolumeTip(ts: BottomTradeStatus, pos: int
                         ) -> BottomOpenVolumeTip:
     '''保存开仓提示信息,如果已存在则不作处理'''
+    dc = ts.open_condition.daily_condition
     key = (ts.custom_symbol + ts.symbol
-           + ovtd['kline_time'].strftime("%Y-%m-%d")
+           + ts.open_condition.daily_condition.kline_time.strftime("%Y-%m-%d")
            )
     key_hash = hashlib.sha1(key.encode()).hexdigest()
-    return BottomOpenVolumeTip.objects(_id=key_hash).update_one(
-        custom_symbol=ts.custom_symbol, symbol=ts.symbol,
-        dkline_time=get_china_date_from_dt(ovtd['d_kline'].datetime),
-        direction=ts.direction, last_price=ovtd['d_kline'].close,
-        volume=ovtd['volume'], last_modified=get_china_tz_now(),
-        open_connection=createOpenConditon(ovtd), upsert=True)
-
-
-def createOpenConditon(ocd: dict) -> BottomOpenCondition:
-    boc = BottomOpenCondition()
-    _d_c = BottomIndicatorValues()
-    _3h_c = BottomIndicatorValues()
-    _30m_c = BottomIndicatorValues()
-    boc.daily_condition = _d_c
-    boc.hourly_condition = _3h_c
-    boc.minute_30_condition = _30m_c
-    _fill_ivalues(ocd['d_kline'], _d_c)
-    _fill_ivalues(ocd['3h_kline'], _3h_c)
-    _fill_ivalues(ocd['30m_kline'], _30m_c)
-    return boc
+    return BottomOpenVolumeTip.objects(id=key_hash).update_one(  # type: ignore
+        upsert=True,
+        set_on_insert__id=key_hash,
+        set_on_insert__custom_symbol=ts.custom_symbol,
+        set_on_insert__symbol=ts.symbol,
+        set_on_insert__dkline_time=get_china_date_from_dt(dc.kline_time),
+        set_on_insert__direction=ts.direction,
+        set_on_insert__last_price=dc.close,
+        set__volume=pos,
+        set__last_modified=get_china_tz_now(),
+        set_on_insert__open_condition=ts.open_condition
+    )
 
 
 def switch_symbol(ts: BottomTradeStatus, n_symbol: str, dt: datetime):
     '''重置交易状态信息'''
     ts.switch_symbol(n_symbol, dt)
     ts.save()
-
-
-def _fill_ivalues(kline: DataFrame, i_values: BottomIndicatorValues):
-    i_values.ema5 = kline.ema5
-    i_values.ema20 = kline.ema20
-    i_values.ema60 = kline.ema60
-    i_values.macd = kline['MACD.close']
-    i_values.close = kline.close
-    i_values.kline_time = get_china_date_from_dt(kline.datetime)
-    i_values.record_time = get_china_tz_now()

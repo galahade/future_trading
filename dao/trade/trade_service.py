@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import List, Optional
 from tqsdk.objs import Order
 from dao.odm.future_trade import (
     BottomOpenVolume, BottomOpenVolumeTip,
@@ -10,6 +12,7 @@ import dao.trade.bottom_trade_dao as bdao
 from utils.common_tools import get_china_date_from_str, get_custom_symbol
 
 from utils.tqsdk_tools import get_chinadt_from_ns
+from mongoengine.queryset.visitor import Q
 
 
 def get_MJStatus(
@@ -17,7 +20,8 @@ def get_MJStatus(
         quote_date: str, strategy_name: str) -> MainJointSymbolStatus:
     '''根据主连合约获取策略交易状态，如果不存在则在数据库中创建
     '''
-    custom_symbol = get_custom_symbol(mj_symbol, direction, strategy_name)
+    custom_symbol = get_custom_symbol(
+        mj_symbol, bool(direction), strategy_name)
     mjss = dao.getMainJointSymbolStatus(custom_symbol)
     if mjss is None:
         mjss = dao.createMainJointSymbolStatus(
@@ -28,7 +32,7 @@ def get_MJStatus(
 
 def get_main_trade_status(
         custom_symbol: str, symbol: str, direction: int, quote_date: str
-        ) -> MainTradeStatus:
+) -> MainTradeStatus:
     ts = mdao.getTradeStatus(symbol, direction)
     if ts is None:
         dt = get_china_date_from_str(quote_date)
@@ -39,13 +43,17 @@ def get_main_trade_status(
 
 def get_bottom_trade_status(
         custom_symbol: str, symbol: str, direction: int, quote_date: str
-        ) -> BottomTradeStatus:
+) -> BottomTradeStatus:
     ts = bdao.getTradeStatus(symbol, direction)
     if ts is None:
         dt = get_china_date_from_str(quote_date)
         ts = bdao.createTradeStatus(
             custom_symbol, symbol, direction, dt)
     return ts
+
+
+def del_trade_status(ts: TradeStatus):
+    dao.deleteTradeStatus(ts)
 
 
 def get_main_ov(symbol: str, direction: int) -> MainOpenVolume:
@@ -60,15 +68,18 @@ def get_bottom_ov(symbol: str, direction: int) -> BottomOpenVolume:
     return bdao.getOpenVolume(symbol, direction)
 
 
-def open_pos(
-        status: TradeStatus, order: Order) -> BottomOpenVolume:
+def open_main_pos(status: TradeStatus, order: Order):
     '''将开仓信息保存至数据库，并更新合约交易状态信息
     '''
     o_dict = _get_odict_from_order(order)
-    if isinstance(status, MainTradeStatus):
-        return mdao.openPosAndUpdateStatus(status, o_dict)
-    elif isinstance(status, BottomTradeStatus):
-        return bdao.openPosAndUpdateStatus(status, o_dict)
+    return mdao.openPosAndUpdateStatus(status, o_dict)
+
+
+def open_bottom_pos(status: TradeStatus, order: Order, bovt: BottomOpenVolumeTip):
+    '''将开仓信息保存至数据库，并更新合约交易状态信息
+    '''
+    o_dict = _get_odict_from_order(order)
+    return bdao.openPosAndUpdateStatus(status, o_dict, bovt)
 
 
 def close_ops(status: TradeStatus, c_type: int, c_message: str,
@@ -118,7 +129,28 @@ def _get_odict_from_order(order: Order) -> dict:
 
 
 def store_b_open_volume_tip(
-        status: BottomTradeStatus, ovtd: dict) -> BottomOpenVolumeTip:
+        status: BottomTradeStatus, pos: int) -> BottomOpenVolumeTip:
     '''将开仓信息保存至数据库，并更新合约交易状态信息
     '''
-    return bdao.createOpenVolumeTip(status, ovtd)
+    return bdao.createOpenVolumeTip(status, pos)
+
+
+def update_trade_status(status: TradeStatus, update_time: datetime):
+    '''更新合约交易状态信息
+    '''
+    status.last_modified = update_time
+    dao.updateTradeStatus(status)
+
+
+def get_last_bottom_tips() -> Optional[List[BottomOpenVolumeTip]]:
+    '''获取最近的开仓提示信息
+    '''
+    return BottomOpenVolumeTip.get_last_tips()
+
+
+def get_last_bottom_tips_by_symbol(
+        symbol: str, direction: int) -> Optional[BottomOpenVolumeTip]:
+    queryset = get_last_bottom_tips()
+    if queryset is not None:
+        return queryset.filter(Q(symbol=symbol) & Q(direction=direction)).first()
+    return None

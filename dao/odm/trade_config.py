@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import List
 from mongoengine import (
     EmbeddedDocument, StringField, IntField, BooleanField,
     ListField, DateTimeField, Document, EmbeddedDocumentField)
@@ -17,16 +19,20 @@ class RohonAccount(Account):
 
 
 class BacktestDays(EmbeddedDocument):
-    start_date = DateTimeField()
-    end_date = DateTimeField()
+    start_date: datetime = DateTimeField()  # type: ignore
+    end_date: datetime = DateTimeField()  # type: ignore
 
 
 class TradeConfigInfo(Document):
-    direction = IntField(required=True, default=2)
-    is_backtest = BooleanField(required=True, default=False)
-    account_type = IntField(required=True, default=0)
-    strategies = ListField(IntField(), default=[1, 2])
-    backtest_days = EmbeddedDocumentField(BacktestDays)
-    tq_account = EmbeddedDocumentField(Account)
-    rohon_account = EmbeddedDocumentField(RohonAccount)
-    date_time = DateTimeField()
+    direction: int = IntField(required=True, default=2)  # type: ignore
+    is_backtest: bool = BooleanField(
+        required=True, default=False)  # type: ignore
+    account_type: int = IntField(required=True, default=0)  # type: ignore
+    strategy_ids: List[int] = ListField(
+        IntField(), default=[1, 2])  # type: ignore
+    backtest_days: BacktestDays = EmbeddedDocumentField(
+        BacktestDays)  # type: ignore
+    tq_account: Account = EmbeddedDocumentField(Account)  # type: ignore
+    rohon_account: RohonAccount = EmbeddedDocumentField(
+        RohonAccount)  # type: ignore
+    date_time: datetime = DateTimeField()  # type: ignore

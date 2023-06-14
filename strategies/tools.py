@@ -119,6 +119,7 @@ def fill_ema60(klines):
 
 
 def is_nline(kline) -> bool:
+    '''判断K线是否是阴线'''
     if kline.open > kline.close:
         return True
     return False
@@ -172,10 +173,9 @@ def get_52060_values(kline) -> tuple:
 def has_set_k_attr(kline: Series, attr_value: str) -> bool:
     '''判断K线是否设置了attr_value属性值，如果设置了，返回True，否则返回False'''
     return (kline.get(attr_value) is not None
-            and not (np.isnan(kline.attr_value)))
+            and not (np.isnan(kline.get(attr_value))))
 
 
 def diff_two_value(first: float, second: float) -> float:
     '''计算两个值的差值，返回差值的绝对值'''
     return abs(first - second) / second * 100
-

@@ -4,7 +4,7 @@ from pandas import DataFrame
 
 from dao.odm.future_trade import (
     MainCloseVolume, MainIndicatorValues, MainOpenCondition,
-    MainOpenVolume, MainTradeStatus)
+    MainOpenVolume, MainSoldCondition, MainTradeStatus)
 from dao.trade.trade_dao import save_close_volume, save_open_volume
 from utils.common_tools import (
     get_china_date_from_dt, get_china_tz_now
@@ -13,7 +13,7 @@ from utils.common_tools import (
 
 def getTradeStatus(symbol: str, direction: int) -> MainTradeStatus:
     '''根据自定义合约代码获取交易状态信息'''
-    return MainTradeStatus.objects(symbol=symbol, direction=direction).first()
+    return MainTradeStatus.objects(symbol=symbol, direction=direction).first()  # type: ignore
 
 
 def createTradeStatus(
@@ -24,18 +24,25 @@ def createTradeStatus(
     ts.symbol = symbol
     ts.direction = direction
     ts.last_modified = dt
+    ts.open_condition = MainOpenCondition()
+    ts.open_condition.daily_condition = MainIndicatorValues()
+    ts.open_condition.hourly_condition = MainIndicatorValues()
+    ts.open_condition.minute_30_condition = MainIndicatorValues()
+    ts.open_condition.minute_5_condition = MainIndicatorValues()
+    ts.sold_condition = MainSoldCondition()
     ts.save()
     return ts
 
 
 def getOpenVolume(symbol: str, direction: int) -> MainOpenVolume:
     '''根据主连合约代码,合约代码，交易方向返回数据库中该合约的开仓信息'''
-    return MainOpenVolume.objects(symbol=symbol, direction=direction).first()
+    return MainOpenVolume.objects(symbol=symbol, direction=direction).first()  # type: ignore
 
 
 def openPosAndUpdateStatus(ts: MainTradeStatus, opd: dict) -> MainOpenVolume:
     '''保存开仓信息,并更新Main Symbol Trade Status 中的持仓数量等信息'''
     ov = MainOpenVolume()
+    ov.open_condition = ts.open_condition
     save_open_volume(ts, opd, ov)
     return ov
 
@@ -68,5 +75,6 @@ def _fill_ivalues(kline: DataFrame, i_values: MainIndicatorValues):
     i_values.macd = kline['MACD.close']
     i_values.close = kline.close
     i_values.open = kline.open
-    i_values.kline_time = get_china_date_from_dt(kline.datetime)
+    i_values.kline_time = get_china_date_from_dt(
+        kline.datetime)  # type: ignore
     i_values.record_time = get_china_tz_now()

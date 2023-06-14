@@ -3,15 +3,24 @@ from datetime import date
 import sys
 from logging import Logger
 import logging.config
-import __main__
 import yaml
 
 now = date.today()
 
 
+class SystemConfig:
+    is_back_test: bool
+    log_level: str
+    trade_type: str
+    start_year: str
+    start_month: str
+    end_year: str
+
 # 在命令行中读取日志等级，是回测还是真实运行等配置，如果进行回测，需要指定
 # 回测开始年份，结束年份，默认为当前年份
-def get_argumets():
+
+
+def get_argumets() -> SystemConfig:
     _parser = argparse.ArgumentParser(prog="tqsdk_future_trade",
                                       description="使用天勤量化执行期货交易策略")
 
@@ -31,18 +40,20 @@ def get_argumets():
     _bt_group.add_argument("-e", "--end_year",
                            type=int, default=now.year, help="backtest 结束年份")
     args = _parser.parse_args()
-    __main__.is_back_test = args.backtest
-    __main__.log_level = args.log
-    __main__.trade_type = args.trade_type
+    systemConfig = SystemConfig()
+    systemConfig.is_back_test = bool(args.backtest)
+    systemConfig.log_level = args.log
+    systemConfig.trade_type = args.trade_type
     if args.backtest:
         if now.year < args.start_year:
             sys.exit(f"回测开始年份{args.start_year},晚于当前年份{now.year}，参数错误.")
         elif now.year < args.end_year:
             sys.exit(f"回测结束年份{args.end_year},晚于当前年份{now.year}，参数错误.")
         else:
-            __main__.start_year = args.start_year
-            __main__.start_month = args.start_month
-            __main__.end_year = args.end_year
+            systemConfig.start_year = args.start_year
+            systemConfig.start_month = args.start_month
+            systemConfig.end_year = args.end_year
+    return systemConfig
 
 
 def get_init_db_args():
@@ -69,7 +80,16 @@ def get_init_db_args():
 
 
 # 根据命令行配置设置日志等级，如不指定，默认为warning
-def setup_log_config(log_level, config_file_name='log_config'):
+def setup_log_config(log_level: str, config_file_name='log_config'):
+    """_summary_
+
+    Args:
+        log_level (str): 日志等级：info，warning 等
+        config_file_name (str, optional): 日志配置文件名. Defaults to 'log_config'.
+
+    Raises:
+        ValueError: 日志等级
+    """
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % log_level)
@@ -88,6 +108,7 @@ class TradeConfigGetter:
     交易配置字典在对象中的名字为: _rules
     接收变量名需要与配置字典中的Key值相同
     '''
+
     def __set_name__(self, owner, name):
         self.dict_key = name
 
