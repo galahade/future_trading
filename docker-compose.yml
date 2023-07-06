@@ -1,40 +1,44 @@
 version: "3.8"
 services:
   app:
-    image: galahade/bottom-future-trade-dev:latest
+    image: galahade/future-trading-dev:latest
     working_dir: /app
     volumes:
       - ".:/app"
-      - bottom-future-trade-log-data:/log
+      - future-trading-log-data:/log
     depends_on:
       - mongo
     environment:
-      MONGO_CONF_FILE: /run/secrets/mongo_conf_file
-      TQ_CONF_FILE: /run/secrets/tq_conf_file
-      ROHON_CONF_FILE: /run/secrets/rohon_conf_file
+      SYSTEM_CONFIG_PATH: /run/secrets/system_config_file
+      SYSTEM_CONFIG_BT_PATH: /run/secrets/system_config_file
+      FUTURE_CONFIG_PATH: /run/secrets/future_config_file
+      FUTURE_CONFIG_BT_PATH: /run/secrets/future_config_bt_file
       ACCOUNT_TYPE: 0
       ENV_NAME: dev
     secrets:
-      - mongo_conf_file
-      - tq_conf_file
-      - rohon_conf_file
-  mongo:
-    image: mongo
-    ports:
-      - 26018:27017
-    volumes:
-      - bottom-trade-mongo-dev-data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      - system_config_file
+      - system_config_bt_file
+      - future_config_file
+      - future_config_bt_file
+  # mongo:
+  #   image: mongo
+  #   ports:
+  #     - 26018:27017
+  #   volumes:
+  #     - bottom-trade-mongo-dev-data:/data/db
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: example
 volumes:
-  bottom-trade-mongo-dev-data:
-  bottom-future-trade-log-data:
+  # bottom-trade-mongo-dev-data:
+  future-trading-log-data:
     external: true
 secrets:
-  mongo_conf_file:
-    file: secrets/mongo_config.yaml
-  tq_conf_file:
-    file: secrets/tq_config.yaml
-  rohon_conf_file:
-    file: secrets/rohon_config.yaml
+  system_config_file:
+    file: secrets/system_config_dev.yaml
+  system_config_bt_file:
+    file: secrets/system_config_backtest_dev.yaml
+  future_config_file:
+    file: conf/trade_config_dev.yaml
+  future_config_bt_file:
+    file: conf/trade_config_backtest_dev.yaml

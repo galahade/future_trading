@@ -13,21 +13,21 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
 
     def _has_traded(self) -> bool:
         '''交易时段是否已经根据盘前提示判断过是否开仓'''
-        kline = self._get_last_kline_in_trade(self._d_klines)
+        kline = self._get_last_dkline()
         if tools.has_set_k_attr(kline, 'l_traded'):
             return True
         self._set_klines_value(self._d_klines, kline.name, 'l_traded', True)
         return False
 
     def _is_dk_macd_matched(self, is_in=True) -> bool:
-        kline = self._get_last_kline_in_trade(self._d_klines, is_in)
+        kline = self._get_last_dkline(is_in)
         if tools.has_set_k_attr(kline, 'l_macd_matched'):
             return bool(kline.l_matched)
         return False
 
     def _match_dk_condition(self, is_in=True) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._d_klines, is_in)
+        kline = self._get_last_dkline(is_in)
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
         s = self.ts.symbol
@@ -59,15 +59,15 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
 
     def _match_3h_condition(self, is_in=True) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._3h_klines, is_in)
+        kline = self._get_lastd_last_3h_kline(is_in)
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
-        _, _, _, macd, _, trade_time, k_date_str_short, _ =\
+        _, _, _, macd, _, trade_time, _, k_date_str =\
             self._get_indicators(kline)
         log_str = '{} {} <摸底做多> 满足3小时 K线时间:{} MACD:{}'
         if macd > 0:
             content = log_str.format(
-                trade_time, self.ts.symbol, k_date_str_short, macd)
+                trade_time, self.ts.symbol, k_date_str, macd)
             logger.info(content)
             self._set_klines_value(
                 self._3h_klines, kline.name, 'l_matched', True)
@@ -80,7 +80,7 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
 
     def _match_30m_condition(self, is_in=True) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._30m_klines, is_in)
+        kline = self._get_lastd_last_30m_kline(is_in)
         if tools.has_set_k_attr(kline, 'l_matched'):
             return kline.l_matched
         e5, e20, e60, macd, close, trade_time, k_date_str_short, _ =\

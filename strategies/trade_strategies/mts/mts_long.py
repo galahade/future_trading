@@ -207,8 +207,8 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
     def _set_sold_condition(self):
         super()._set_sold_condition()
         s_c = self.ts.sold_condition
-        d_c_id = self.ts.open_condition.daily_condition.condition_id
-        h_c_id = self.ts.open_condition.hourly_condition.condition_id
+        d_c_id = self.ts.open_condition.daily_condition.condition_id  # type: ignore
+        h_c_id = self.ts.open_condition.hourly_condition.condition_id  # type: ignore
         if d_c_id in [1, 2]:
             s_c.take_profit_cond = 1
         elif d_c_id == 5:

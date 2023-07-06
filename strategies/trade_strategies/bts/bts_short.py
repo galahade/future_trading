@@ -8,7 +8,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
 
     def _has_traded(self) -> bool:
         '''交易时段是否已经根据盘前提示判断过是否开仓'''
-        kline = self._get_last_kline_in_trade(self._d_klines)
+        kline = self._get_last_dkline()
         if tools.has_set_k_attr(kline, 's_traded'):
             return True
         self._set_klines_value(self._d_klines, kline.name, 's_traded', True)
@@ -18,7 +18,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         '''做空日线条件检测, 合约交易日必须大于等于60天
         '''
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._d_klines, is_in)
+        kline = self._get_last_dkline(is_in)
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
         s = self.ts.symbol
@@ -47,7 +47,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
 
     def _match_3h_condition(self, is_in=True) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._3h_klines, is_in)
+        kline = self._get_lastd_last_3h_kline(is_in)
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
         _, _, _, macd, _, trade_time, _, k_date_str =\
@@ -68,8 +68,8 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
 
     def _match_30m_condition(self, is_in=True) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._30m_klines, is_in)
-        dkline = self._get_last_kline_in_trade(self._d_klines, is_in)
+        kline = self._get_lastd_last_30m_kline(is_in)
+        dkline = self._get_last_dkline(is_in)
         if tools.has_set_k_attr(kline, 's_matched'):
             return kline.s_matched
         s = self.ts.symbol

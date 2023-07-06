@@ -17,7 +17,7 @@ class MJStrategy(Strategy):
     def __init__(self, config: StrategyConfig):
         super().__init__(config)
         self.mjs_status = self._get_MJSymbol_status()
-        self.config.setCustomSymbol(self.mjs_status.custom_symbol)
+        self.config.setCustomSymbol(self.mjs_status.custom_symbol) # type: ignore
         self.current_trade_strategy: TradeStrategy =\
             self._create_trade_strategy(
                 self.mjs_status.current_symbol)  # type: ignore
@@ -73,9 +73,7 @@ class MJStrategy(Strategy):
 
     def execute_after_trade(self):
         logger = self.logger
-        log_str = '{} {} 交易结束'
-        # 由于当日线发生变化时，盯盘人会重新生成交易人，故不需要再次填充指标
-        # self.fill_indicators_by_type(1)
+        log_str = '{} {} 交易时间结束，开始执行收盘后操作'
         self.current_trade_strategy.execute_after_trade()
         self.next_trade_strategy.execute_after_trade()
         logger.info(log_str.format(

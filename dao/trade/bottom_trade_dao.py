@@ -14,7 +14,7 @@ from utils.common_tools import (
 
 
 def getBottomOpenVolumeTips() -> List[BottomOpenVolumeTip]:
-    return BottomOpenVolumeTip.objects()
+    return BottomOpenVolumeTip.objects()  # type: ignore
 
 
 def getTradeStatus(symbol: str, direction: int) -> BottomTradeStatus:

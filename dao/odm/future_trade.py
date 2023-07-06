@@ -178,7 +178,7 @@ class BottomOpenVolumeTip(Document):
     # 期货合约
     symbol: str = StringField(required=True)  # type: ignore
     # 最近一根日k线时间
-    dkline_time = DateTimeField()
+    dkline_time: datetime = DateTimeField()  # type: ignore
     # 交易方向：0: 做空，1: 做多
     direction = IntField(required=True, min_value=0, max_value=1)
     # 上一交易日收盘价格

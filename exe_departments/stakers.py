@@ -29,11 +29,10 @@ class Staker(ABC):
         logger = self.logger
         logger.info(f'交易初始资金为{self._api.get_account().balance}')
         # self._api.wait_update()
-        logger.info("天勤服务器端已连接成功，开始交易")
+        logger.info("天勤服务器端已连接成功")
         self._prepare_task()
-        while True:
-            self._handle_trade()
-            self._init_status()
+        logger.info("交易准备工作完成，开始盯盘".center(100, "*"))
+        self._handle_trade()
 
     def _handle_trade(self):
         '''交易相关操作，包括盘前提示，交易，盘后操作
@@ -43,15 +42,12 @@ class Staker(ABC):
         for trader in self.traders:
             trader.execute_before_trade()
         logger.info(
-            '盘前提示结束，开始进入交易'.ljust(50, '*').rjust(50, '*')
+            '盘前提示结束，开始进入交易'.center(100, '*')
         )
         while True:
-            traders = filter(
-                lambda t: t.is_active and not t.is_finished, self.traders)
+            traders = filter(lambda t: t.is_active, self.traders)
             # 当所有交易员当日交易结束后，退出循环
             traders = list(traders)
-            if len(traders) == 0:
-                break
             self._api.wait_update()
             for trader in traders:
                 trader.execute_trade()
@@ -64,10 +60,10 @@ class Staker(ABC):
     def _prepare_task(self):
         self.logger.info('当前配置的品种为:')
         for trader in self.traders:
-            self.logger.info(f'{trader._config.custom_symbol}')
+            self.logger.info(f'{trader._config.f_info.symbol}')
         self.logger.info('当前参与交易品种为:')
         for trader in filter(lambda t: t.is_active, self.traders):
-            self.logger.info(f'{trader._config.custom_symbol}')
+            self.logger.info(f'{trader._config.f_info.symbol}')
 
     @abstractmethod
     def _init_future_configs(self) -> List[FutureConfigInfo]:
@@ -120,3 +116,40 @@ class BTStaker(Staker):
     def _prepare_task(self):
         '''交易前的准备工作, 实盘交易打印出参与交易品种的合约信息，回测交易打印出回测的起止时间'''
         super()._prepare_task()
+
+    def _handle_trade(self):
+        '''交易相关操作，包括盘前提示，交易，盘后操作
+
+        当交易日结束后该函数将退出执行，然后重新生成trader并再次执行该函数。'''
+        logger = self.logger
+        for trader in self.traders:
+            trader.execute_before_trade()
+        logger.info(
+            '盘前提示结束，开始进入交易'.center(100, '*')
+        )
+        while True:
+            traders = filter(
+                lambda t: t.is_active and not t.is_finished, self.traders)
+            # 当所有交易员当日交易结束后，退出循环
+            traders = list(traders)
+            if len(traders) == 0:
+                logger.debug("所有交易员当日交易结束，退出交易".center(100, '*'))
+                break
+            self._api.wait_update()
+            for trader in traders:
+                trader.execute_trade()
+
+    def start_work(self):
+        '''执行盯盘操作
+
+        每次程序运行该方法执行一次。除非被中断，否则不会停止。 
+        '''
+        logger = self.logger
+        logger.info(f'交易初始资金为{self._api.get_account().balance}')
+        # self._api.wait_update()
+        logger.info("天勤服务器端已连接成功")
+        self._prepare_task()
+        logger.info("交易准备工作完成，开始盯盘".center(100, "*"))
+        while True:
+            self._handle_trade()
+            self._init_status()

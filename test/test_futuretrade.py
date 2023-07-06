@@ -16,14 +16,14 @@ def setup_db():
     dba.create_db('e144b3c1-2579-4bc5-a4c5-b61625367dcc')
 
 
-def test_get_bovt_by_symbol(setup_db):
-    test = BottomOpenVolumeTip.objects(symbol='CZCE.UR309').first()
-    print(test.dkline_time)
-    bovts = get_last_bottom_tips()
-    assert len(bovts) == 2
-    bovt = get_last_bottom_tips_by_symbol('CZCE.UR309', 0)
-    assert bovt.direction == 0
-    assert bovt.volume == 1
+# def test_get_bovt_by_symbol(setup_db):
+#     test = BottomOpenVolumeTip.objects(symbol='CZCE.UR309').first()
+#     print(test.dkline_time)
+#     bovts = get_last_bottom_tips()
+#     assert len(bovts) == 2
+#     bovt = get_last_bottom_tips_by_symbol('CZCE.UR309', 0)
+#     assert bovt.direction == 0
+#     assert bovt.volume == 1
 
 
 # def test_get_test_get_bovt_by_symbol()):

@@ -2,6 +2,8 @@ from datetime import datetime
 from utils.common_tools import (
     get_china_date_from_str, get_custom_symbol, get_next_symbol, tz_utc_8
 )
+from strategies.tools import is_trading_time
+from tqsdk import TqApi, TqAuth, TqSim
 
 
 class TestClass:
@@ -23,3 +25,11 @@ class TestClass:
     def test_get_custom_symbol(self):
         cs = get_custom_symbol('KQ.m@DCE.a', bool(0), 'main')
         assert cs == 'DCE_a_main_short'
+
+    def test_is_trading_time(self):
+        # api = TqApi(auth=TqAuth('galahade', '211212'))
+        api = TqApi(auth=TqAuth("galahade", "211212"))
+        quote = api.get_quote("KQ.m@DCE.i")
+        # klines = api.get_kline_serial("SHFE.rb2309", 60)
+        # result = is_trading_time(api, 'KQ.m@DCE.a')
+        # assert result is False

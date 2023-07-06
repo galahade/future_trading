@@ -125,10 +125,29 @@ class BottomTradeStrategy(TradeStrategy):
         '''摸底策略暂时只用作提示，不涉及止损'''
         pass
 
-    def _get_last_kline_in_trade(self, klines, is_in=True):
+    def _get_last_dkline(self, is_in=True):
         if is_in:
-            return klines.iloc[-2]
-        return klines.iloc[-1]
+            return self._d_klines.iloc[-2]
+        return self._d_klines.iloc[-1]
+
+    def _get_last_dk_date(self, is_in) -> datetime:
+        d_kline = self._get_last_dkline(is_in)
+        dk_time = tafunc.time_to_datetime(d_kline.datetime)
+        return datetime(dk_time.year, dk_time.month, dk_time.day)
+
+    def _get_lastd_last_3h_kline(self, is_in):
+        last_trade_date = self._get_last_dk_date(is_in)
+        h3_klines = self._3h_klines
+        lastday_last_3hk_time = last_trade_date.replace(hour=12)
+        l_timestamp = tafunc.time_to_ns_timestamp(lastday_last_3hk_time)
+        return h3_klines[h3_klines.datetime <= l_timestamp].iloc[-1]
+
+    def _get_lastd_last_30m_kline(self, is_in):
+        last_trade_date = self._get_last_dk_date(is_in)
+        m30_klines = self._30m_klines
+        lastday_lasth3k_time = last_trade_date.replace(hour=14, minute=30)
+        l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
+        return m30_klines[m30_klines.datetime <= l_timestamp].iloc[-1]
 
     def execute_before_trade(self, is_in_trading: bool):
         '''摸底策略每天交易前执行一次该方法，用来检查并记录当天需要开仓的品种
@@ -139,8 +158,20 @@ class BottomTradeStrategy(TradeStrategy):
         if self._can_get_tips(is_in_trading):
             log_str = ('{} {} {} 符合开仓条件, 开盘后注意关注开仓 '
                        '前一日收盘价:{}, 预计开仓:{} 手')
-            dkline = self._get_last_kline_in_trade(
-                self._d_klines, is_in_trading)
+            dkline = self._get_last_dkline(is_in_trading)
+            pos = self._calc_open_pos(dkline.close)
+            content = log_str.format(
+                self._get_trade_date(), self.ts.symbol, self.ts.custom_symbol,
+                dkline.close, pos
+            )
+            self.logger.info(content)
+            service.store_b_open_volume_tip(self.ts, pos)  # type: ignore
+
+    def execute_after_trade(self):
+        if self._can_get_tips(False):
+            log_str = ('{} {} {} 符合开仓条件, 开盘后注意关注开仓 '
+                       '前一日收盘价:{}, 预计开仓:{} 手')
+            dkline = self._get_last_dkline(False)
             pos = self._calc_open_pos(dkline.close)
             content = log_str.format(
                 self._get_trade_date(), self.ts.symbol, self.ts.custom_symbol,
@@ -150,7 +181,8 @@ class BottomTradeStrategy(TradeStrategy):
             service.store_b_open_volume_tip(self.ts, pos)  # type: ignore
 
     def _store_open_pos_info(self, order: Order):
-        service.open_bottom_pos(self.ts, order, self.tip)
+        if self.tip is not None:
+            service.open_bottom_pos(self.ts, order, self.tip)
 
     def _get_indicators(self, kline) -> tuple:
         ema5 = kline.ema5

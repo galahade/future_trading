@@ -159,6 +159,19 @@ def is_trading_time(api, symbol):
     return result
 
 
+def is_after_execute_time(api, symbol):
+    '''判断是否在交易时间内的方法，如果购买专业版，可以使用天勤提供的方法判断
+    否则，使用简单的时间段进行判断
+    '''
+    result = False
+    now = datetime.now()
+    dkline = api.get_kline_serial(symbol, 60*60*24, 1).iloc[0]
+    k_dt = tafunc.time_to_datetime(dkline.datetime)
+    if (now.hour >= 16 and now.hour < 21 and now.day == k_dt.day):
+        result = True
+    return result
+
+
 def get_52060_values(kline) -> tuple:
     ema5 = kline.ema5
     ema20 = kline.ema20
@@ -173,7 +186,7 @@ def get_52060_values(kline) -> tuple:
 def has_set_k_attr(kline: Series, attr_value: str) -> bool:
     '''判断K线是否设置了attr_value属性值，如果设置了，返回True，否则返回False'''
     return (kline.get(attr_value) is not None
-            and not (np.isnan(kline.get(attr_value))))
+            and not (np.isnan(kline.get(attr_value))))  # type: ignore
 
 
 def diff_two_value(first: float, second: float) -> float:

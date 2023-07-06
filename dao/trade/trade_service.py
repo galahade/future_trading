@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from tqsdk.objs import Order
 from dao.odm.future_trade import (
@@ -72,14 +72,14 @@ def open_main_pos(status: TradeStatus, order: Order):
     '''将开仓信息保存至数据库，并更新合约交易状态信息
     '''
     o_dict = _get_odict_from_order(order)
-    return mdao.openPosAndUpdateStatus(status, o_dict)
+    return mdao.openPosAndUpdateStatus(status, o_dict)  # type: ignore
 
 
 def open_bottom_pos(status: TradeStatus, order: Order, bovt: BottomOpenVolumeTip):
     '''将开仓信息保存至数据库，并更新合约交易状态信息
     '''
     o_dict = _get_odict_from_order(order)
-    return bdao.openPosAndUpdateStatus(status, o_dict, bovt)
+    return bdao.openPosAndUpdateStatus(status, o_dict, bovt)  # type: ignore
 
 
 def close_ops(status: TradeStatus, c_type: int, c_message: str,
@@ -145,12 +145,21 @@ def update_trade_status(status: TradeStatus, update_time: datetime):
 def get_last_bottom_tips() -> Optional[List[BottomOpenVolumeTip]]:
     '''获取最近的开仓提示信息
     '''
-    return BottomOpenVolumeTip.get_last_tips()
+    return BottomOpenVolumeTip.get_last_tips()  # type: ignore
 
 
 def get_last_bottom_tips_by_symbol(
         symbol: str, direction: int) -> Optional[BottomOpenVolumeTip]:
     queryset = get_last_bottom_tips()
     if queryset is not None:
-        return queryset.filter(Q(symbol=symbol) & Q(direction=direction)).first()
+        return queryset.filter(Q(symbol=symbol) & Q(direction=direction)).first() # type: ignore
     return None
+
+
+def get_last7d_count(bovt: BottomOpenVolumeTip) -> int:
+    '''获取最近7天的开仓提示数量
+    '''
+    return BottomOpenVolumeTip.objects(
+        Q(symbol=bovt.symbol) & Q(direction=bovt.direction) &
+        Q(dkline_time__gte=bovt.dkline_time - timedelta(days=7))
+    ).count()  # type: ignore

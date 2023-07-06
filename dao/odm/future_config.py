@@ -1,4 +1,4 @@
-from typing import List, Required
+from typing import List
 from mongoengine import (
     Document, EmbeddedDocument, StringField, FloatField,
     BooleanField,  EmbeddedDocumentField, ListField, IntField)
@@ -38,7 +38,7 @@ class ShortConfig(EmbeddedDocument):
 
 class FutureConfigInfo(Document):
     # 期货合约加交易所的表示方法
-    symbol: str = StringField(required=True)  # type: ignore
+    symbol: str = StringField(unique=True, required=True)  # type: ignore
     # 是否对该品种进行交易
     is_active: bool = BooleanField(required=True)  # type: ignore
     # 合约中文名称

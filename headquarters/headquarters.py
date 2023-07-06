@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 import uuid
 from mongoengine import connect
 # from tqsdk2 import TqRohon, TqAuth, TqSim
@@ -52,9 +53,9 @@ class DBA:
         else:
             self._url = f'mongodb://{host}:{port}/'
 
-    def create_db(self, db_name: str = None):
+    def create_db(self, db_name: Optional[str] = None):
         if db_name is None:
-            if self._trade_config.is_backtest:
+            if self._trade_config.is_backtest:  # type: ignore
                 db_name = str(uuid.uuid4())
             else:
                 db_name = 'future_trade'

@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta, timezone
 import logging
-from typing import List, Optional, Union
+from typing import List
 import yaml
 import requests
 tz_utc_8 = timezone(timedelta(hours=8))  # 创建时区UTC+8:00，即东八区对应的时区 

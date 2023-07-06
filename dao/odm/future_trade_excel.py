@@ -3,6 +3,7 @@ from dao.odm.future_config import FutureConfigInfo
 from dao.odm.future_trade import BottomOpenVolumeTip
 from utils.common_tools import get_zl_symbol
 import xlwings as xw
+import dao.trade.trade_service as t_service
 
 
 class Trade_Tips_Sheet:
@@ -20,7 +21,7 @@ class Trade_Tips_Sheet:
         sheet.range('G1').value = '开仓比例'
         sheet.range('H1').value = '资金总额'
         sheet.range('I1').value = '时间'
-        # sheet.range('J1').value = '平仓价格'
+        sheet.range('J1').value = '7日内提示次数'
         # sheet.range('K1').value = '手数'
         # sheet.range('L1').value = '浮动盈亏'
         # sheet.range('M1').value = '手续费'
@@ -40,7 +41,7 @@ class Trade_Tips_Sheet:
         st.range((self.count, 7)).value = self._get_open_pos_scale(bovt)
         st.range((self.count, 8)).value = 0
         st.range((self.count, 9)).value = bovt.dkline_time
-        # st.range((self.count, 10)).value = close_price
+        st.range((self.count, 10)).value = t_service.get_last7d_count(bovt)
         # st.range((self.count, 11)).value = opi.trade_number
         # st.range((self.count, 12)).value = float_profit
         # st.range((self.count, 13)).value = commission

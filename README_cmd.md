@@ -8,16 +8,16 @@
 
 ```bash
 # Apple M1 build command
-docker buildx build --platform linux/amd64 -t  galahade/bottom-trade-dev.
+docker buildx build --platform linux/amd64 -t  galahade/future-trading-dev .
 # 使用缓存构建image
-docker build --tag galahade/bottom-trade-dev .
+docker build --tag galahade/future-trading-dev .
 # 不使用缓存，从头构建image
-docker build --no-cache --tag galahade/bottom-trade-dev .
+docker build --no-cache --tag galahade/future-trading-dev .
 # 构建完成镜像后进行连接测试
-docker run -e TZ=Asia/Shanghai --rm -ti galahade/bottom-trade-dev /bin/bash
-docker run --rm -ti galahade/bottom-trade-dev /bin/bash
+docker run -e TZ=Asia/Shanghai --rm -ti galahade/future-trading-dev /bin/bash
+docker run --rm -ti galahade/future-trading-dev /bin/bash
 # 对镜像打标签
-docker tag galahade/bottom-trade-dev galahade/bottom-trade-dev:v0.1
+docker tag galahade/future-trading-dev galahade/future-trading-dev:v0.1
 ```
 
 ### 构建测试镜像
@@ -67,17 +67,17 @@ docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 ### 创建Docker volume
 
 ```bash
-docker volume create bottom-trade-log-data
+docker volume create future-trading-log-data
 # 查看 volume 内容的命令
-docker run -it -v bottom-trade-log-data:/log --rm bash:4.4
+docker run -it -v future-trading-log-data:/log --rm bash:4.4
 ```
 
 ### 部署 Docker Image
 
 ```bash
 # 开发环境
-docker stack deploy -c docker-compose.yml bottom-trade-dev
-docker stack rm bottom-trade-dev
+docker stack deploy -c docker-compose.yml future-trading-dev
+docker stack rm future-trading-dev
 
 # 回测环境
 docker stack deploy -c docker-compose-backtest.yml bottom-trade-backtest

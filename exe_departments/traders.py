@@ -10,6 +10,7 @@ from strategies.main_joint_symbol_strategies.smjs_strategies import (
     MJMainShortStrategy, MJMainStrategy, MJStrategy
 )
 from utils.common import LoggerGetter
+from utils.common_tools import get_china_date_from_str
 
 
 class StrategyTrader:
@@ -76,6 +77,12 @@ class StrategyTrader:
         if self.short_mjs is not None:
             self.short_mjs.execute_before_trade(is_in_trading)
 
+    def execute_after_trade(self):
+        if self.long_mjs is not None:
+            self.long_mjs.execute_after_trade()
+        if self.short_mjs is not None:
+            self.short_mjs.execute_after_trade()
+
     def execute_trade(self):
         if self.long_mjs is not None:
             self.long_mjs.execute_trade()
@@ -131,6 +138,7 @@ class Trader():
         self._config = StrategyConfig(api, future_info, direction, is_bt)
         self.strategy_traders = self._init_s_traders(strategy_ids)
         self.is_finished = False
+        self._has_run_after_execute = False
         self._mj_d_klines = api.get_kline_serial(
             future_info.symbol, self._config.getDailyK_Duration())
 
@@ -143,17 +151,23 @@ class Trader():
         return s_traders
 
     def _is_daily_trade_finished(self) -> bool:
-        return self._config.api.is_changing(
-            self._mj_d_klines.iloc[-1], "datetime")
+        return tools.is_after_execute_time(self._config.api, self._config.f_info.symbol)
+
+    def _is_trading_time(self) -> bool:
+        return tools.is_trading_time(self._config.api, self._config.f_info.symbol)
 
     def execute_trade(self):
         '''根据该品种配置和当前交易时间，执行交易操作'''
-        if (self.is_active and not self.is_finished
-                and tools.is_trading_time(self._config.api, self._config.get_mj_symbol())):
+        logger = self.logger
+        log_str = '{} {} <交易人> 完成当日交易，开始执行盘后操作'
+        quote_time = get_china_date_from_str(self._config.quote.datetime)
+        if self._is_daily_trade_finished() and not self._has_run_after_execute:
+            logger.info(log_str.format(quote_time, self._config.f_info.symbol))
+            self.execute_after_trade()
+            self._has_run_after_execute = True
+        elif (self.is_active and self._is_trading_time()):
             for s_trader in self.strategy_traders:
                 s_trader.execute_trade()
-        if self._is_daily_trade_finished():
-            self.is_finished = True
 
     def execute_before_trade(self):
         '''交易前的准备工作,
@@ -162,3 +176,31 @@ class Trader():
         '''
         for s_trader in self.strategy_traders:
             s_trader.execute_before_trade()
+
+    def execute_after_trade(self):
+        '''交易前的准备工作,
+
+        包括：各种策略的换月，实盘交易中提示开仓等
+        '''
+        for s_trader in self.strategy_traders:
+            s_trader.execute_after_trade()
+
+
+class TestTrader(Trader):
+    def _is_daily_trade_finished(self) -> bool:
+        return self._config.api.is_changing(
+            self._mj_d_klines.iloc[-1], "datetime")
+
+    def execute_trade(self):
+        '''根据该品种配置和当前交易时间，执行交易操作'''
+        logger = self.logger
+        log_str = '{} {} <交易人:{}> 完成当日交易，准备产生新的交易人'
+        quote_time = get_china_date_from_str(self._config.quote.datetime)
+        if self._is_daily_trade_finished():
+            logger.info(log_str.format(
+                quote_time, self._config.f_info.symbol, id(self)))
+            self.is_finished = True
+        elif (self.is_active and not self.is_finished
+                and tools.is_trading_time(self._config.api, self._config.get_mj_symbol())):
+            for s_trader in self.strategy_traders:
+                s_trader.execute_trade()
