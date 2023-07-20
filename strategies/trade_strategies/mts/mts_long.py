@@ -111,7 +111,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         diff9_60 = tools.diff_two_value(e9, e60)
         log_str = ('{} {} <做多> 满足3小时{}: K线时间:{} '
                    'ema9:{} ema22:{} ema60:{} 收盘:{} 开盘:{} '
-                   'diffc_60:{} diffo_60:{} diff22_60{} MACD:{}')
+                   'diffc_60:{} diffo_60:{} diff22_60:{} MACD:{}')
         cond_number = 0
         if diffc_60 < 3 or diffo_60 < 3:
             if dkline.l_condition in [1, 2]:
@@ -122,8 +122,8 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
                 elif close > e9 > e22 > e60:
                     if self._match_3hk_c2_distance():
                         cond_number = 2
-                elif diff9_60 < 1 and diff22_60 < 1 and macd > 0:
-                    cond_number = 5
+                    elif diff9_60 < 1 and diff22_60 < 1 and macd > 0:
+                        cond_number = 5
             elif dkline.l_condition in [3, 4]:
                 if (close > e60 > e22 and macd > 0 and diff22_60 < 1 and e9 <
                    e60):
@@ -150,7 +150,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         kline = self._get_last_kline_in_trade(self._30m_klines)
         if tools.has_set_k_attr(kline, 'l_condition'):
             return kline.l_condition
-        e9, e22, e60, macd, close, _, trade_time, k_date_str, _ =\
+        e9, e22, e60, macd, close, _, trade_time, _, k_date_str =\
             self._get_indicators(kline)
         diffc_60 = tools.diff_two_value(close, e60)
         log_str = ('{} {} <做多> 满足30分钟条件 K线时间:{} ema9:{} ema22:{} '
@@ -176,7 +176,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         kline = self._get_last_kline_in_trade(self._5m_klines)
         if tools.has_set_k_attr(kline, 'l_condition'):
             return kline.l_condition
-        e9, e22, e60, macd, close, _, trade_time, k_date_str, _ =\
+        e9, e22, e60, macd, close, _, trade_time, _, k_date_str =\
             self._get_indicators(kline)
         diffc_60 = tools.diff_two_value(close, e60)
         log_str = ('{} {} <做多> 满足5分钟条件 K线时间:{} '

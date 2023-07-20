@@ -42,7 +42,7 @@ class TradeStrategy(Strategy):
         self.quote = self.api.get_quote(symbol)
         self._d_klines = self.fetch_daily_klines()
         self._3h_klines = self.api.get_kline_serial(
-            symbol, self.config.get3hK_Duration(),
+            symbol, self.config.get3hK_Duration()
         )
         self._30m_klines = self.api.get_kline_serial(
             symbol, self.config.get30mK_Duration()

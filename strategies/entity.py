@@ -28,7 +28,7 @@ class StrategyConfig:
         return self.f_info.main_symbols
 
     def getKlineLength(self):
-        return 100
+        return 200
 
     def getDailyK_Duration(self):
         return 24 * 60 * 60

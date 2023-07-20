@@ -68,6 +68,7 @@ docker tag galahade/bottom-trade-prod galahade/bottom-trade-prod:v0.1
 
 ```bash
 docker volume create future-trading-log-data
+docker volume create ft-log-data
 # 查看 volume 内容的命令
 docker run -it -v future-trading-log-data:/log --rm bash:4.4
 ```
@@ -78,6 +79,10 @@ docker run -it -v future-trading-log-data:/log --rm bash:4.4
 # 开发环境
 docker stack deploy -c docker-compose.yml future-trading-dev
 docker stack rm future-trading-dev
+
+# 调试环境
+docker stack deploy -c docker-compose-debug.yml ft-debug
+docker stack rm ft-debug
 
 # 回测环境
 docker stack deploy -c docker-compose-backtest.yml bottom-trade-backtest

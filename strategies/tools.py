@@ -32,7 +32,7 @@ def sendPushDeerMsg(title: str, content: str):
 
 
 def fill_macd(klines):
-    macd = MACD(klines, 12, 24, 4)
+    macd = MACD(klines, 12, 24, 4).round({'bar': 3})
     # 用 K 线图模拟 MACD 指标柱状图
     klines["MACD.open"] = 0.0
     klines["MACD.close"] = macd["bar"]
@@ -94,27 +94,27 @@ def _draw_macd_line(klines):
 
 
 def fill_ema5(klines):
-    ema = EMA(klines, 5)
+    ema = EMA(klines, 5).round(3)
     klines["ema5"] = ema.ema
 
 
 def fill_ema9(klines):
-    ema = EMA(klines, 9)
+    ema = EMA(klines, 9).round(3)
     klines["ema9"] = ema.ema
 
 
 def fill_ema20(klines):
-    ema = EMA(klines, 20)
+    ema = EMA(klines, 20).round(3)
     klines["ema20"] = ema.ema
 
 
 def fill_ema22(klines):
-    ema22 = EMA(klines, 22)
+    ema22 = EMA(klines, 22).round(3)
     klines["ema22"] = ema22.ema
 
 
 def fill_ema60(klines):
-    ema = EMA(klines, 60)
+    ema = EMA(klines, 60).round(3)
     klines["ema60"] = ema.ema
 
 
@@ -191,4 +191,4 @@ def has_set_k_attr(kline: Series, attr_value: str) -> bool:
 
 def diff_two_value(first: float, second: float) -> float:
     '''计算两个值的差值，返回差值的绝对值'''
-    return abs(first - second) / second * 100
+    return round(abs(first - second) / second * 100, 3)

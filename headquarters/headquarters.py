@@ -59,7 +59,7 @@ class DBA:
                 db_name = str(uuid.uuid4())
             else:
                 db_name = 'future_trade'
-        db_url = f'{self._url}{db_name}'
+        db_url = f'{self._url}{db_name}?authSource=admin'
         connect(host=db_url, tz_aware=True, tzinfo=tz_utc_8)
 
 
