@@ -12,7 +12,6 @@ services:
       MONGO_CONF_FILE: /run/secrets/mongo_conf_file
       TQ_CONF_FILE: /run/secrets/tq_conf_file
       ROHON_CONF_FILE: /run/secrets/rohon_conf_file
-      ACCOUNT_TYPE: 0
       ENV_NAME: backtest
     secrets:
       - mongo_conf_file

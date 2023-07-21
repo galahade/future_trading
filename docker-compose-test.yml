@@ -1,40 +1,49 @@
 version: "3.8"
 services:
   app:
-    image: galahade/bottom-future-trade-test:v0.1
+    image: galahade/future-trading-test:v0.1
     working_dir: /app
     volumes:
-      - bottom-future-trade-log-data:/log
+      - ft_test-log-data:/log
     depends_on:
-      - mongo
+      - mongo_db
+    networks:
+      - database
     environment:
-      MONGO_CONF_FILE: /run/secrets/mongo_conf_file
-      TQ_CONF_FILE: /run/secrets/tq_conf_file
-      ROHON_CONF_FILE: /run/secrets/rohon_conf_file
-      ACCOUNT_TYPE: 0
-      ACCOUNT_BALANCE: 100000
+      SYSTEM_CONFIG_PATH: /run/secrets/system_config_file
+      SYSTEM_CONFIG_BT_PATH: /run/secrets/system_config_file
+      FUTURE_CONFIG_PATH: /run/secrets/future_config_file
+      FUTURE_CONFIG_BT_PATH: /run/secrets/future_config_bt_file
       ENV_NAME: test
     secrets:
-      - mongo_conf_file
-      - tq_conf_file
-      - rohon_conf_file
-  mongo:
+      - system_config_file
+      - system_config_bt_file
+      - future_config_file
+      - future_config_bt_file
+  mongo_db:
     image: mongo
+    networks:
+      - database
     ports:
       - 26019:27017
     volumes:
-      - bottom-trade-mongo-test-data:/data/db
+      - ft_test-mongo-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 volumes:
-  bottom-trade-mongo-test-data:
-  bottom-future-trade-log-data:
+  ft_test-mongo-data:
+  ft_test-log-data:
     external: true
 secrets:
-  mongo_conf_file:
-    file: secrets/mongo_config.yaml
-  tq_conf_file:
-    file: secrets/tq_config.yaml
-  rohon_conf_file:
-    file: secrets/rohon_config.yaml
+  system_config_file:
+    file: secrets/system_config_test.yaml
+  system_config_bt_file:
+    file: secrets/system_config_backtest_dev.yaml
+  future_config_file:
+    file: conf/trade_config_test.yaml
+  future_config_bt_file:
+    file: conf/trade_config_backtest_dev.yaml
+networks:
+  database:
+    attachable: true

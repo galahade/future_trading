@@ -18,6 +18,7 @@ docker run -e TZ=Asia/Shanghai --rm -ti galahade/future-trading-dev /bin/bash
 docker run --rm -ti galahade/future-trading-dev /bin/bash
 # 对镜像打标签
 docker tag galahade/future-trading-dev galahade/future-trading-dev:v0.1
+docker tag galahade/future-trading-dev galahade/future-trading-test:v0.1
 ```
 
 ### 构建测试镜像
@@ -89,8 +90,8 @@ docker stack deploy -c docker-compose-backtest.yml bottom-trade-backtest
 docker stack rm bottom-trade-backtest
 
 # 测试环境
-docker stack deploy -c docker-compose-test.yml bottom-trade-test
-docker stack rm bottom-trade-test
+docker stack deploy -c docker-compose-test.yml ft-test
+docker stack rm ft-test
 
 # 生产环境
 docker stack deploy -c docker-compose-prod.yml bottom-trade

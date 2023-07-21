@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from typing import Optional
 import uuid
@@ -9,10 +10,8 @@ from dao.odm.trade_config import TradeConfigInfo
 from exe_departments.stakers import BTStaker, RealStaker
 import utils.config_utils as c_utils
 from utils.config_utils import (SystemConfig)
-from utils.common_tools import tz_utc_8, LoggerGetter
+from utils.common_tools import tz_utc_8, LoggerGetter, sendSystemStartupMsg
 # from tqsdk2 import TqApi, TqBacktest, BacktestFinished
-
-ACCOUNT_BALANCE = int(os.getenv('ACCOUNT_BALANCE', '10000000'))
 
 
 class Commander:
@@ -76,7 +75,8 @@ class AccountManager:
             # self._trade_account = TqRohon(td_url, broker_id, app_id,
             # auth_code, # user_name, password)
         else:
-            self.trade_account = TqSim(init_balance=ACCOUNT_BALANCE)
+            print(trade_config.account_balance)
+            self.trade_account = TqSim(init_balance=trade_config.account_balance)
         self.tq_auth = TqAuth(
             _tq_acc.user_name, _tq_acc.password)  # type: ignore
 
@@ -110,6 +110,9 @@ class TradeManager:
             self.tqApi = TqApi(account=trade_account, auth=acc_manager.tq_auth)
             self.staker = RealStaker(
                 self.tqApi, direction, trade_config.strategy_ids)
+        sendSystemStartupMsg(datetime.now(), trade_config)
+
+
 
     def start_work(self):
         logger = self.logger

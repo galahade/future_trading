@@ -150,7 +150,11 @@ def get_last_bottom_tips() -> Optional[List[BottomOpenVolumeTip]]:
 
 def get_last_bottom_tips_by_symbol(
         symbol: str, direction: int) -> Optional[BottomOpenVolumeTip]:
-    queryset = get_last_bottom_tips()
+    queryset = None
+    try:
+        queryset = get_last_bottom_tips()
+    except Exception:
+        pass
     if queryset is not None:
         return queryset.filter(Q(symbol=symbol) & Q(direction=direction)).first() # type: ignore
     return None

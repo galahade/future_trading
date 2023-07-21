@@ -17,11 +17,6 @@
 * `MONGO_CONF_FILE`: `mongo`数据库相关信息配置文件位置
 * `TQ_CONF_FILE`: 天勤账户相关信息配置文件位置
 * `ROHON_CONF_FILE`: 融航账户相关信息配置文件位置
-* `ACCOUNT_TYPE`: 交易用户类型：
-  * 0: 测试用户
-  * 1: 融航用户
-  * 2: 个人用户
-* `ACCOUNT_BALANCE`: 计算开仓手数的虚拟资金额。缺省值为一千万。
 
 #### unix like 系统配置
 
@@ -31,8 +26,6 @@
 export MONGO_CONF_FILE=secrets/mongo_conf_file
 export TQ_CONF_FILE=secrets/tq_conf_file
 export ROHON_CONF_FILE=secrets/rohon_conf_file
-exprot ACCOUNT_TYPE=1
-exprot ACCOUNT_BALANCE=100000
 ```
 
 `docker`在`compse`文件中配置环境变量，具体方法参考相关`docker-compse`文件。

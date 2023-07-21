@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from mongoengine import (
-    EmbeddedDocument, StringField, IntField, BooleanField,
+    EmbeddedDocument, StringField, IntField, BooleanField, FloatField,
     ListField, DateTimeField, Document, EmbeddedDocumentField)
 
 
@@ -28,6 +28,7 @@ class TradeConfigInfo(Document):
     is_backtest: bool = BooleanField(
         required=True, default=False)  # type: ignore
     account_type: int = IntField(required=True, default=0)  # type: ignore
+    account_balance: float = FloatField(default=100000.00)  # type: ignore
     strategy_ids: List[int] = ListField(
         IntField(), default=[1, 2])  # type: ignore
     backtest_days: BacktestDays = EmbeddedDocumentField(

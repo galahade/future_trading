@@ -4,7 +4,38 @@ import logging
 from typing import List
 import yaml
 import requests
+from utils import global_var as gvar
+from pypushdeer import PushDeer
+from dao.odm.trade_config import TradeConfigInfo
+
+pushdeer = PushDeer(pushkey=gvar.PUSH_KEY)
 tz_utc_8 = timezone(timedelta(hours=8))  # 创建时区UTC+8:00，即东八区对应的时区 
+logger = logging.getLogger(__name__)
+
+def sendPushDeerMsg(title: str, content: str):
+    try:
+        pushdeer.send_markdown(title, desp=content)
+    except Exception as e:
+        logger.exception(e)
+
+
+def sendSystemStartupMsg(s_time: datetime, trade_config: TradeConfigInfo):
+    title = f'### {s_time.strftime("%Y-%m-%d")} {gvar.ENV_NAME}环境启动'
+    strategies = ''
+    for i in trade_config.strategy_ids:
+        if i == 1:
+            strategies += '主策略 '
+        elif i == 2:
+            strategies += '摸底策略'
+    direction_str = ''
+    if trade_config.direction == 1:
+        direction_str = '做多'
+    elif trade_config.direction == 2:
+        direction_str = '多空'
+    elif trade_config.direction == 0:
+        direction_str = '做空'
+    content = f'使用策略: **{strategies}**, 交易方向: **{direction_str}**, 启动时间: **{s_time.strftime("%Y-%m-%d %H:%M:%S")}**'
+    sendPushDeerMsg(title, content)
 
 
 def send_msg(title: str, content: str) -> None:

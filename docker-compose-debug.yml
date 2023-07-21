@@ -15,7 +15,6 @@ services:
       SYSTEM_CONFIG_BT_PATH: /run/secrets/system_config_file
       FUTURE_CONFIG_PATH: /run/secrets/future_config_file
       FUTURE_CONFIG_BT_PATH: /run/secrets/future_config_bt_file
-      ACCOUNT_TYPE: 0
       ENV_NAME: debug
     secrets:
       - system_config_file

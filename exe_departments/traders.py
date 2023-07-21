@@ -11,9 +11,11 @@ from strategies.main_joint_symbol_strategies.smjs_strategies import (
 )
 from utils.common import LoggerGetter
 from utils.common_tools import get_china_date_from_str
-
+import logging
 
 class StrategyTrader:
+    logger = LoggerGetter()
+
     def __init__(self, s_config: StrategyConfig):
         self._config = s_config
         self.long_mjs: Optional[MJStrategy]
@@ -47,10 +49,15 @@ class StrategyTrader:
         Returns:
             StrategyTrader: 返回该类的子类实例，如 MainStrategyTrader
         """
-        if sid == 1:
-            return MainStrategyTrader(config)
-        if sid == 2:
-            return BottomStrategyTrader(config)
+        logger = logging.getLogger(__name__)
+        try: 
+            if sid == 1:
+                return MainStrategyTrader(config)
+            if sid == 2:
+                return BottomStrategyTrader(config)
+        except Exception as e:
+            logger.error(e, stack_info=True)
+            raise e
         raise ValueError('sid must be 1 or 2')
 
     @abstractmethod

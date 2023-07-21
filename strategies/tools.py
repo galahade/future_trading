@@ -3,11 +3,8 @@ import numpy as np
 from pandas import Series
 from tqsdk.ta import EMA, MACD
 from tqsdk import tafunc
-from pypushdeer import PushDeer
-import utils.tqsdk_tools as tq_tools
-
-
-pushdeer = PushDeer(pushkey="PDU20739T7ZemNBLmqiMV8CYNKUm665tYsoAshLKo")
+from utils.common_tools import sendPushDeerMsg
+from utils import global_var as gvar
 
 
 def sendTradePosMsg(custom_symbol: str, symbol: str, direction: bool, pos: int,
@@ -16,19 +13,9 @@ def sendTradePosMsg(custom_symbol: str, symbol: str, direction: bool, pos: int,
         dir_str = '开仓'
     else:
         dir_str = '平仓'
-    title = f'## {custom_symbol} {dir_str}'
+    title = f'## {gvar.ENV_NAME}环境 {custom_symbol} {dir_str}'
     content = (f'{t_time} **{symbol}** {dir_str} **{pos}** 手，价格 **¥{price}**')
     sendPushDeerMsg(title, content)
-
-
-def sendSystemStartupMsg(s_time: datetime):
-    title = f'## {tq_tools.get_date_str_short(s_time)} 主策略启动'
-    content = f'启动时间: **{tq_tools.get_date_str(s_time)}**'
-    sendPushDeerMsg(title, content)
-
-
-def sendPushDeerMsg(title: str, content: str):
-    pushdeer.send_markdown(title, desp=content)
 
 
 def fill_macd(klines):
