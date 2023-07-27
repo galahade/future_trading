@@ -10,9 +10,9 @@ from utils import global_var as gvar
 def sendTradePosMsg(custom_symbol: str, symbol: str, direction: bool, pos: int,
                     price: float, t_time: str):
     if direction:
-        dir_str = '开仓'
+        dir_str = '买入'
     else:
-        dir_str = '平仓'
+        dir_str = '卖出'
     title = f'## {gvar.ENV_NAME}环境 {custom_symbol} {dir_str}'
     content = (f'{t_time} **{symbol}** {dir_str} **{pos}** 手，价格 **¥{price}**')
     sendPushDeerMsg(title, content)

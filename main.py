@@ -25,7 +25,7 @@ def main():
         commander = Commander(systemConfig.is_back_test)
         commander.start_work()
     except Exception as e:
-        logger.fatal(e)
+        logger.exception(e)
 
 
 if __name__ == "__main__":
