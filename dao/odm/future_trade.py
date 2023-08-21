@@ -177,6 +177,8 @@ class BottomOpenVolumeTip(Document):
     custom_symbol = StringField(required=True)
     # 期货合约
     symbol: str = StringField(required=True)  # type: ignore
+    # 是否需要在下一交易日开仓
+    need_trade: bool = BooleanField(required=True, default=False)
     # 最近一根日k线时间
     dkline_time: datetime = DateTimeField()  # type: ignore
     # 交易方向：0: 做空，1: 做多

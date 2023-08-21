@@ -72,7 +72,7 @@ class BottomTradeStrategy(TradeStrategy):
             self.tip = service.get_last_bottom_tips_by_symbol(
                 self.ts.symbol, self._get_direction())
         if self.tip is not None:
-            return True
+            return self.tip.need_trade
         return False
 
     def _is_within_distance(self, last_matched_kline, is_macd_matched) -> bool:
