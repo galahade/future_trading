@@ -1,6 +1,9 @@
 secrets/
 conf/
 tags
+# vscode
+.vscode/
+.VSCodeCounter/
 # excel file
 *.xlsx
 *.swp
