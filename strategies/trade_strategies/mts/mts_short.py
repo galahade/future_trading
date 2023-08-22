@@ -182,7 +182,7 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
             order.trade_price,
             self.config.f_info.short_config.profit_start_scale,  # type: ignore
             False)
-        self.logger.info(f'{self._get_trade_date_str()}'
+        self.logger.info(f'{self._get_trade_date_str()} {self.symbol}'
                          f'<做空>开仓价:{order.trade_price}'
                          f'止损设为:{s_c.stop_loss_price}'
                          f'止盈起始价为:{s_c.tp_started_point}')
@@ -194,7 +194,7 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
         trade_config = self.config.f_info.short_config
         sc = self.ts.sold_condition
         trade_time = tq_tools.get_date_str(self._get_trade_date())
-        log_str = '{} <做空> 现价{} 达到1:{} 盈亏比,将止损价提高至{}'
+        log_str = '{} {} <做空> 现价{} 达到1:{} 盈亏比,将止损价提高至{}'
         promote_price = self._calc_price(
             trade_price, trade_config.promote_scale, False)
         if sc.has_increase_slp:
@@ -207,13 +207,13 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
             sc.has_increase_slp = True
             service.update_trade_status(self.ts, self._get_trade_date())
             logger.debug(log_str.format(
-                trade_time, price,
+                trade_time, self.symbol, price,
                 trade_config.promote_scale, sc.stop_loss_price))
 
     def _is_f5m_closeout(self) -> bool:
         logger = self.logger
         kline = self._get_last_kline_in_trade(self._d_klines)
-        log_str = ('{} <做空> 满足最后5分钟止盈,当前价:{} '
+        log_str = ('{} {} <做空> 满足最后5分钟止盈,当前价:{} '
                    '日线EMA9:{} 日线EMA22:{} MACD:{}')
         e9, e22, _, macd, _, _, trade_time, _, _ =\
             self._get_indicators(kline)
@@ -222,7 +222,7 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
         if self._is_last_5m():
             if (macd > 0 and price > e9):
                 logger.debug(log_str.format(
-                    trade_time, price, e9, e22, macd))
+                    trade_time, self.symbol, price, e9, e22, macd))
                 return True
         return False
 

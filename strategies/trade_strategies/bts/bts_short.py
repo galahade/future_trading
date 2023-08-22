@@ -103,7 +103,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
             order.trade_price,
             self.config.f_info.short_config.profit_start_scale,
             False)
-        self.logger.info(f'{self._get_trade_date_str()}'
+        self.logger.info(f'{self._get_trade_date_str()} {self.symbol} '
                          f'<做空>开仓价:{order.trade_price}'
                          f'止损设为:{s_c.stop_loss_price}'
                          f'止盈起始价为:{s_c.tp_started_point}')

@@ -4,7 +4,7 @@ from typing import Optional
 import uuid
 from mongoengine import connect
 # from tqsdk2 import TqRohon, TqAuth, TqSim
-from tqsdk import TqApi, TqBacktest, TqAuth, TqSim
+from tqsdk import TqApi, TqBacktest, TqAuth, TqKq, TqSim
 import dao.config_service as c_service
 from dao.odm.trade_config import TradeConfigInfo
 from exe_departments.stakers import BTStaker, RealStaker
@@ -76,7 +76,10 @@ class AccountManager:
             # auth_code, # user_name, password)
         else:
             print(trade_config.account_balance)
-            self.trade_account = TqSim(init_balance=trade_config.account_balance)
+            # TqSim 账户的交易信息保存在内存中，当平仓时会因为系统重启而发生平仓手数不足的错误
+            # TqKq 是将交易信息保存在服务端，是否会出现问题待测试。
+            # self.trade_account = TqSim(init_balance=trade_config.account_balance)
+            self.trade_account = TqKq()
         self.tq_auth = TqAuth(
             _tq_acc.user_name, _tq_acc.password)  # type: ignore
 

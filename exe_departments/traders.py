@@ -161,7 +161,15 @@ class Trader():
         return tools.is_after_execute_time(self._config.api, self._config.f_info.symbol)
 
     def _is_trading_time(self) -> bool:
-        return tools.is_trading_time(self._config.api, self._config.f_info.symbol)
+        symbol = self._config.f_info.symbol
+        if len(self.strategy_traders):
+            s_trader = self.strategy_traders[0]
+            if self.strategy_traders[0].long_mjs is not None:
+                symbol = s_trader.long_mjs.current_trade_strategy.ts.symbol
+            else:
+                symbol = s_trader.short_mjs.current_trade_strategy.ts.symbol
+
+        return tools.is_trading_time(self._config.api, symbol)
 
     def execute_trade(self):
         '''根据该品种配置和当前交易时间，执行交易操作'''

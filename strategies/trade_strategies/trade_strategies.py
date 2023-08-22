@@ -38,6 +38,7 @@ class TradeStrategy(Strategy):
     def __init__(self, config: StrategyConfig, symbol: str):
         super().__init__(config)
         self.api = config.api
+        self.symbol = symbol
         self.ts = self._get_trade_status(symbol)
         self.quote = self.api.get_quote(symbol)
         self._d_klines = self.fetch_daily_klines()

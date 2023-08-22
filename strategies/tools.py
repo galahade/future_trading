@@ -5,6 +5,7 @@ from tqsdk.ta import EMA, MACD
 from tqsdk import tafunc
 from utils.common_tools import sendPushDeerMsg
 from utils import global_var as gvar
+from utils.common_tools import sendPushDeerMsg
 
 
 def sendTradePosMsg(custom_symbol: str, symbol: str, direction: bool, pos: int,

@@ -31,7 +31,8 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         elif self._get_profit_condition() in [4]:
             if sc.take_profit_stage == 1:
                 sc.take_profit_stage = 2
-                sold_pos = self._get_carry_pos() // 2
+                carry_pos = self._get_carry_pos()
+                sold_pos = carry_pos // 2 if carry_pos > 1 else carry_pos
                 order = self.close_pos(sold_pos, 1, sp_log.format(
                     sc.take_profit_cond, '50%'))
                 content = log_str.format(
@@ -230,7 +231,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             s_c.tp_started_point = self._calc_price(
                 order.trade_price,
                 self.config.f_info.long_config.profit_start_scale_2, True)
-        self.logger.info(f'{self._get_trade_date_str()}'
+        self.logger.info(f'{self._get_trade_date_str()} {self.symbol} '
                          f'<做多>开仓价:{order.trade_price}'
                          f'止损设为:{s_c.stop_loss_price}'
                          f'止盈起始价为:{s_c.tp_started_point}')
@@ -242,7 +243,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         trade_config = self.config.f_info.long_config
         sc = self.ts.sold_condition
         trade_time = tq_tools.get_date_str(self._get_trade_date())
-        log_str = '{} <做多> 现价{} 达到1:{} 盈亏比,将止损价提高至{}'
+        log_str = '{} {} <做多> 现价{} 达到1:{} 盈亏比,将止损价提高至{}'
         promote_price = self._calc_price(
             trade_price, trade_config.promote_scale_1, True)
         if sc.has_increase_slp:
@@ -254,13 +255,13 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             sc.has_increase_slp = True
             service.update_trade_status(self.ts, self._get_trade_date())
             logger.debug(log_str.format(
-                trade_time, price,
+                trade_time, self.symbol, price,
                 trade_config.promote_scale_1, sc.stop_loss_price))
 
     def _is_f5m_closeout(self) -> bool:
         logger = self.logger
         kline = self._get_last_kline_in_trade(self._d_klines)
-        log_str = ('{} <做多> 满足最后5分钟止盈 止盈条件:{} 当前价:{} '
+        log_str = ('{} {} <做多> 满足最后5分钟止盈 止盈条件:{} 当前价:{} '
                    '日线EMA9:{} 日线EMA22:{} EMA60:{}')
         e9, e22, e60, _, _, _, trade_time, _, _ =\
             self._get_indicators(kline)
@@ -270,11 +271,11 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         if self._is_last_5m():
             if (sc.take_profit_cond == 1 and price < e60 and e9 < e22):
                 logger.debug(log_str.format(
-                    trade_time, 1, price, e9, e22, e60))
+                    trade_time, self.symbol, 1, price, e9, e22, e60))
                 return True
             elif (sc.take_profit_cond in [2, 3] and price < e22 and e9 < e22):
                 logger.debug(log_str.format(
-                    trade_time, 2, price, e9, e22, e60))
+                    trade_time, self.symbol, 2, price, e9, e22, e60))
                 return True
         return False
 
@@ -289,7 +290,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         '''
         logger = self.logger
         if self._is_trading():
-            log_str = ('{} <做多> 现价:{} 达到止盈价{} 开始监控 '
+            log_str = ('{} {} <做多> 现价:{} 达到止盈价{} 开始监控 '
                        '止损价提高到:{}')
             price = self._get_current_price()
             sc = self.ts.sold_condition
@@ -302,7 +303,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
                     sc.take_profit_stage = 1
                 service.update_trade_status(self.ts, self._get_trade_date())
                 logger.info(log_str.format(
-                    tq_tools.get_date_str(self._get_trade_date()), price,
+                    tq_tools.get_date_str(self._get_trade_date()), self.symbol, price,
                     sc.tp_started_point, sc.stop_loss_price
                 ))
                 return sc.take_profit_cond
