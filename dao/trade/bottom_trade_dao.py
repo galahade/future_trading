@@ -79,6 +79,7 @@ def createOpenVolumeTip(ts: BottomTradeStatus, pos: int
         set_on_insert__dkline_time=get_china_date_from_dt(dc.kline_time),
         set_on_insert__direction=ts.direction,
         set_on_insert__last_price=dc.close,
+        set_on_insert__need_trade=False,
         set__volume=pos,
         set__last_modified=get_china_tz_now(),
         set_on_insert__open_condition=ts.open_condition
