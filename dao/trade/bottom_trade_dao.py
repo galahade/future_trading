@@ -1,13 +1,12 @@
 from datetime import datetime
 import hashlib
 from typing import List
-from pandas import DataFrame
-from dao.trade.trade_dao import save_close_volume, save_open_volume
 from dao.odm.future_trade import (
     BottomCloseVolume, BottomIndicatorValues, BottomOpenCondition,
     BottomOpenVolume, BottomOpenVolumeTip, BottomSoldCondition,
-    BottomTradeStatus
+    BottomTradeStatus, MainJointSymbolStatus, TradeStatus
 )
+import dao.trade.trade_dao as dao
 from utils.common_tools import (
     get_china_date_from_dt, get_china_tz_now
 )
@@ -21,6 +20,11 @@ def getTradeStatus(symbol: str, direction: int) -> BottomTradeStatus:
     '''根据自定义合约代码获取交易状态信息'''
     return BottomTradeStatus.objects(  # type: ignore
         symbol=symbol, direction=direction).first()
+
+
+def getTradeStatusByCustomSymbol(custom_symbol: str) -> list[BottomTradeStatus]:
+    '''根据自定义合约代码获取交易状态信息'''
+    return BottomTradeStatus.objects(custom_symbol=custom_symbol)  # type: ignore
 
 
 def createTradeStatus(
@@ -51,7 +55,7 @@ def openPosAndUpdateStatus(ts: BottomTradeStatus, opd: dict, bovt: BottomOpenVol
     '''保存开仓信息,并更新SymbolStatus中的持仓数量等信息'''
     ov = BottomOpenVolume()
     ov.tip = bovt
-    save_open_volume(ts, opd, ov)
+    dao.save_open_volume(ts, opd, ov)
     return ov
 
 
@@ -59,7 +63,7 @@ def closePosAndUpdateStatus(ts: BottomTradeStatus, cpd: dict
                             ) -> BottomCloseVolume:
     '''保存平仓信息,并更新SymbolStatus中的持仓数量等信息'''
     cv = BottomCloseVolume()
-    save_close_volume(ts, cpd, cv)
+    dao.save_close_volume(ts, cpd, cv)
     return cv
 
 
@@ -86,7 +90,11 @@ def createOpenVolumeTip(ts: BottomTradeStatus, pos: int
     )
 
 
-def switch_symbol(ts: BottomTradeStatus, n_symbol: str, dt: datetime):
-    '''重置交易状态信息'''
-    ts.switch_symbol(n_symbol, dt)
-    ts.save()
+def switch_symbol(
+        mj_status: MainJointSymbolStatus,
+        current_status: TradeStatus,
+        next_status: TradeStatus,
+        new_status: TradeStatus):
+    '''重置期货合约交易状态信息, 用于下一个交易合约使用'''
+    trade_status_list = getTradeStatusByCustomSymbol(mj_status.custom_symbol)
+    dao.switch_symbol(mj_status, current_status, next_status, new_status, trade_status_list)

@@ -34,7 +34,7 @@ class MainTradeStrategy(TradeStrategy):
     def _can_open_pos(self) -> bool:
         '''判断是否可以开仓'''
         logger = self.logger
-        if not self._is_trading():
+        if not self.is_trading():
             if self._match_dk_condition():
                 if self._match_3h_condition():
                     if self._match_30m_condition():

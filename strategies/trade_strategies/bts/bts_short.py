@@ -38,8 +38,12 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
             logger.info(content)
             self._set_klines_value(
                 self._d_klines, kline.name, 's_matched', True)
-            self._set_open_condition(
-                kline, self.ts.open_condition.daily_condition)  # type: ignore
+            try:
+                self._set_open_condition(
+                    kline, self.ts.open_condition.daily_condition)  # type: ignore
+            except ValueError as e:
+                self.logger.debug(f'{self.ts.symbol}-{self.ts.direction}:设置开仓条件出现错误')
+                raise e
         else:
             self._set_klines_value(
                 self._d_klines, kline.name, 's_matched', False)

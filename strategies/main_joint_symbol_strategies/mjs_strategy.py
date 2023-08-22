@@ -24,24 +24,38 @@ class MJStrategy(Strategy):
         self.next_trade_strategy: TradeStrategy =\
             self._create_trade_strategy(
                 self.mjs_status.next_symbol)  # type: ignore
+    
+    def _update_trade_strategy(self):
+        '''更新策略的合约状态表'''
+        self.current_trade_strategy = self._create_trade_strategy(
+            self.mjs_status.current_symbol)  # type: ignore
+        self.next_trade_strategy = self._create_trade_strategy(
+            self.mjs_status.next_symbol)  # type: ignore
 
     def swith_symbol(self):
-        '''换月
+        '''盘前换月
 
-        换月流程：
-            1. 对当前交易策略进行平仓操作
-            2. 将下个交易策略设置为当前交易策略
-            3. 从配置文件中获得再下一个交易合约，并创建对应的交易策略, 并设置为下个交易策略
+        换月流程： 
+            1. 记录需要换月交易的信息
+            2. 更新主连合约状态表中的当前合约和下一个合约的信息
+            3. 更新各策略的合约状态表
         '''
+        current_symbol = self.config.quote.underlying_symbol
         next_symbol = get_next_symbol(
             self.config.quote.underlying_symbol,
             self.config.f_info.main_symbols)  # type: ignore
-        order = self.current_trade_strategy.closeout(2, '换月')
-        status = self.current_trade_strategy.ts
-        self.current_trade_strategy = self.next_trade_strategy
-        status = service.switch_symbol(
-            status, next_symbol, self.config.quote.datetime, order)
-        self.next_trade_strategy = self._create_trade_strategy(status.symbol)
+        self.mjs_status.current_symbol = current_symbol
+        self.mjs_status.next_symbol = next_symbol
+        current_status = self.current_trade_strategy.ts
+        next_status = self.next_trade_strategy.ts
+        self.logger.info(f'主连合约{self.mjs_status.main_joint_symbol}换月：'
+                         f'上一主力合约：{current_status.symbol} '
+                         f'下一主力合约：{next_status.symbol}'
+                         f'交易系统主力合约：{self.mjs_status.current_symbol}'
+                         f'即将成为主力的合约：{self.mjs_status.next_symbol}')
+        service.switch_symbol(self.mjs_status, current_status, next_status,
+                              self.config.quote.datetime)
+        # self.next_trade_strategy = self._create_trade_strategy(status.symbol)
 
     def _get_MJSymbol_status(self) -> MainJointSymbolStatus:
         return service.get_MJStatus(
@@ -52,6 +66,7 @@ class MJStrategy(Strategy):
             self.config.quote.datetime, self._get_name())
 
     def execute_before_trade(self, is_in_trading: bool):
+        self._update_trade_strategy()
         self.current_trade_strategy.execute_before_trade(is_in_trading)
         self.next_trade_strategy.execute_before_trade(is_in_trading)
 

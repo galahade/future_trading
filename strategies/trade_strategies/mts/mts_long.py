@@ -110,7 +110,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         diffo_60 = tools.diff_two_value(open_p, e60)
         diff22_60 = tools.diff_two_value(e22, e60)
         diff9_60 = tools.diff_two_value(e9, e60)
-        log_str = ('{} {} <做多> 满足3小时{}: K线时间:{} '
+        log_str = ('{} {} <做多> 满足3小时{} K线时间:{} '
                    'ema9:{} ema22:{} ema60:{} 收盘:{} 开盘:{} '
                    'diffc_60:{} diffo_60:{} diff22_60:{} MACD:{}')
         cond_number = 0
@@ -199,7 +199,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
 
     def _has_match_stop_loss(self) -> bool:
         price = self._get_current_price()
-        if self._is_trading() == 1:
+        if self.is_trading() == 1:
             sc = self.ts.sold_condition
             if price <= sc.stop_loss_price:
                 return True
@@ -289,7 +289,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         4:止盈条件4
         '''
         logger = self.logger
-        if self._is_trading():
+        if self.is_trading():
             log_str = ('{} {} <做多> 现价:{} 达到止盈价{} 开始监控 '
                        '止损价提高到:{}')
             price = self._get_current_price()

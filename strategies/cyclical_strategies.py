@@ -13,16 +13,19 @@ class CyclicalStrategy:
         self.switch_days = s_config.f_info.switch_days
         self.trade_switch_day = s_config.f_info.switch_days[0]
         self.no_trade_switch_day = s_config.f_info.switch_days[1]
-        self.erd = s_config.quote.expire_rest_days
 
     def _is_time_to_switch(self, mjstrategy: MJStrategy) -> bool:
         '''判断是否到了切换时间'''
         result = False
         c_ts = mjstrategy.current_trade_strategy.ts
+        erd = mjstrategy.current_trade_strategy.quote.expire_rest_days
+        quote = mjstrategy.config.quote
+        if quote.underlying_symbol == c_ts.symbol:
+            return result
         if c_ts.trade_status == 1:
-            if self.erd <= self.trade_switch_day:
+            if erd <= self.trade_switch_day:
                 result = True
-        elif self.erd < self.no_trade_switch_day:
+        elif erd < self.no_trade_switch_day:
             result = True
         return result
 

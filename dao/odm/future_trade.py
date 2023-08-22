@@ -262,17 +262,6 @@ class TradeStatus(Document):
         self.open_condition.clear()
         self.sold_condition.clear()
 
-    def switch_symbol(self, symbol: str, dt: datetime):
-        '''切换合约'''
-        self.symbol = symbol
-        self.trade_status = 0
-        self.carrying_volume = 0
-        self.start_time = None  # type: ignore
-        self.end_time = None  # type: ignore
-        self.open_pos_info = None  # type: ignore
-        self.last_modified = dt
-        self._clear_conditions()
-
 
 class MainTradeStatus(TradeStatus):
     # 开仓信息
@@ -305,8 +294,44 @@ class MainJointSymbolStatus(Document):
     direction = IntField(required=True)
     last_modified = DateTimeField()
 
-    def switch_symbol(self, new_symbol: str, switch_time: datetime):
-        '''切换合约时需要更新的信息'''
-        self.current_symbol = self.next_symbol
-        self.next_symbol = new_symbol
-        self.last_modified = switch_time
+
+class SwitchSymbolTradeRecord(Document):
+    '''切换合约时的交易记录
+    当盘前需要换月平仓时生成该记录，用于盘中对该品种进行平仓交易
+    并将平仓的结果记录在该记录中'''
+    meta = {
+        'indexes': [
+            {
+                'fields': ['custom_symbol', 'next_symbol'],
+                'unique': True
+            }
+        ]}
+    id: str = StringField(primary_key=True)
+    custom_symbol: str = StringField(required=True)
+    # 期货合约
+    current_symbol: str = StringField(required=True)  # type: ignore
+    next_symbol: str = StringField(required=True)  # type: ignore
+    # 交易时间
+    quote_time: datetime = DateTimeField()  # type: ignore
+    # 交易方向：0: 做空，1: 做多
+    direction: int = IntField(required=True, min_value=0, max_value=1)
+    # 平仓完成状态：0: 未完成，1: 已完成
+    current_close_status: bool = BooleanField(default=False)
+    # 下一个合约是否需要开仓
+    next_need_open: bool = BooleanField(default=False)
+    # 下一个合约的开仓状态
+    next_open_status: bool = BooleanField(default=False)
+    # 换月前的交易记录
+    current_open_volume_info: TradePosBase = ReferenceField(
+        TradePosBase)  # type: ignore
+    # 换月平仓的交易记录
+    close_volume_info: TradePosBase = ReferenceField(
+        TradePosBase)  # type: ignore 
+    # 换月开仓的交易记录
+    next_open_volume_info: TradePosBase = ReferenceField(
+        TradePosBase)  # type: ignore
+    last_modified: datetime = DateTimeField()
+
+    @queryset_manager
+    def objects(doc_cls, queryset):
+        return queryset.order_by('-quote_time')

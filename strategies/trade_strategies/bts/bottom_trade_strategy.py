@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Tuple
 from tqsdk import tafunc
 from tqsdk.objs import Order
-from dao.odm.future_trade import BottomIndicatorValues, BottomOpenVolumeTip, BottomTradeStatus
+from dao.odm.future_trade import BottomIndicatorValues, BottomTradeStatus
 from strategies.entity import StrategyConfig
 import strategies.tools as tools
 import dao.trade.trade_service as service
@@ -207,6 +207,8 @@ class BottomTradeStrategy(TradeStrategy):
         '''设置开仓条件'''
         e5, e20, e60, macd, close, _, _, _ =\
             self._get_indicators(kline)
+        if biv is None:
+            raise ValueError(f'{kline}, 没有开仓条件')
         biv.ema5 = e5
         biv.ema20 = e20
         biv.ema60 = e60

@@ -3,7 +3,7 @@ from typing import List
 from venv import logger
 from tqsdk import TqApi
 from dao.odm.future_config import FutureConfigInfo
-from exe_departments.traders import Trader
+from exe_departments.traders import MainStrategyTrader, Trader
 from utils.common import LoggerGetter
 from utils.config_utils import (get_future_configs)
 import dao.config_service as c_service
@@ -64,6 +64,17 @@ class Staker(ABC):
         self.logger.info('当前参与交易品种为:')
         for trader in filter(lambda t: t.is_active, self.traders):
             self.logger.info(f'{trader._config.f_info.symbol}')
+            s_traders = trader.strategy_traders
+            for strader in filter(lambda t: t.long_mjs is not None, s_traders):
+                if isinstance(strader, MainStrategyTrader):
+                    self.logger.info('主策略做多合约列表：')
+                    self.logger.info(f'当前合约：{strader.long_mjs.mjs_status.current_symbol}')
+                    self.logger.info(f'下一合约：{strader.long_mjs.mjs_status.next_symbol}')
+            for strader in filter(lambda t: t.short_mjs is not None, s_traders):
+                if isinstance(strader, MainStrategyTrader):
+                    self.logger.info('主策略做空合约列表：')
+                    self.logger.info(f'当前合约：{strader.long_mjs.mjs_status.current_symbol}')
+                    self.logger.info(f'下一合约：{strader.long_mjs.mjs_status.next_symbol}')
 
     @abstractmethod
     def _init_future_configs(self) -> List[FutureConfigInfo]:

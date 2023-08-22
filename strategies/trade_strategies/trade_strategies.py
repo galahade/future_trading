@@ -62,9 +62,10 @@ class TradeStrategy(Strategy):
 
     def execute_trade(self):
         '''在交易期间，循环执行该方法尝试交易'''
-        if self._is_trading():
+        self._trade_switch_symbol()
+        if self.is_trading():
             self._try_close_pos()
-        elif not self._is_trading():
+        elif not self.is_trading():
             self._try_open_pos()
 
     def execute_after_trade(self):
@@ -82,7 +83,7 @@ class TradeStrategy(Strategy):
         '''
         return self.close_pos(self.ts.carrying_volume, c_type, c_message)  # type: ignore
 
-    def open_pos(self, pos: int) -> Order:
+    def open_pos(self, pos: int, o_message='') -> Order:
         '''进行开仓相关操作，并记录开仓信息，输出日志'''
         order = self._trade_pos(pos, 'OPEN')
         self._set_open_pos_info(order)
@@ -105,7 +106,7 @@ class TradeStrategy(Strategy):
         order = None
         if self.ts.trade_status == 1:
             order = self._trade_pos(pos, 'CLOSE')
-            service.close_ops(self.ts, c_type, c_message, order)
+            order.close_volume = service.close_ops(self.ts, c_type, c_message, order)
         return order  # type: ignore
 
     def is_changing(self, k_type: int) -> bool:
@@ -145,8 +146,21 @@ class TradeStrategy(Strategy):
                 self.config.getKlineLength()).copy()
         return self._d_klines
 
+    def _trade_switch_symbol(self):
+        record = service.get_switch_symbol_trade_record(self.ts)
+        if record is not None:
+            ovi = record.current_open_volume_info
+            order_c = self.close_pos(ovi.volume, 2, '换月平仓')
+            record.close_volume_info = order_c.close_volume
+            if record.next_need_open:
+            # TO-DO: 当需要换月开仓时，需要确定它的止盈止损条件，
+            # 但目前还无法确定，所以暂时不开仓，等待条件确定后在实现开仓逻辑 
+                record.next_open_status = True
+            service.update_switch_symbol_trade_record(record)
+
     def _trade_pos(self, pos: int, offset: str) -> Order:
-        '''和期货交易所进行期货交易'''
+        '''和期货交易所进行期货交易
+        先尝试市价下单，如果不支持则将当前价格作为限价尝试下单'''
         try:
             order = self.api.insert_order(
                 symbol=self.ts.symbol,
@@ -166,6 +180,7 @@ class TradeStrategy(Strategy):
             self.api.wait_update()
             if order.status == "FINISHED":
                 break
+        service.store_tq_order(order)
         return order
 
     def _calc_price(self, o_price: float, scale: float, is_up: bool) -> float:
@@ -219,22 +234,27 @@ class TradeStrategy(Strategy):
         available = (
             self.api.get_account().balance *
             f_info.open_pos_scale / f_info.multiple)
+        self.logger.debug(f'{available}-{price}-{self.api.get_account().balance}-{f_info.open_pos_scale}-{f_info.multiple}')
         pos = ceil(available / price)
         return pos
 
     def _try_close_pos(self):
         '''交易的主要方法，负责判断是否满足平仓条件：当合约有持仓时，尝试止盈或止损
         满足条件后平仓。'''
-        if self._is_trading():
+        if self.is_trading():
             self._try_stop_loss()
             self._try_take_profit()
 
     def _try_open_pos(self):
         '''交易的主要方法，负责判断是否满足开仓条件：当合约无持仓，且满足条件后开仓。'''
-        if not self._is_trading():
+        if not self.is_trading():
             if self._can_open_pos():
-                pos = self._calc_open_pos(self._get_current_price())
-                self.open_pos(pos)
+                try:
+                    pos = self._calc_open_pos(self._get_current_price())
+                    self.open_pos(pos)
+                except Exception as e:
+                    self.logger.debug(f'quote:{self.quote}')
+                    raise e
 
     def _set_klines_value(self, klines, k_name, k_key, k_value):
         klines.loc[k_name, k_key] = k_value
@@ -243,7 +263,7 @@ class TradeStrategy(Strategy):
         '''获取持仓手数'''
         return self.ts.carrying_volume  # type: ignore
 
-    def _is_trading(self) -> bool:
+    def is_trading(self) -> bool:
         '''判断是否已经有交易存在'''
         return self.ts.trade_status == 1
 

@@ -143,7 +143,7 @@ class Trader():
             strategy_ids: List[int], direction: int = 2, is_bt: bool = False):
         self.is_active = future_info.is_active
         self._config = StrategyConfig(api, future_info, direction, is_bt)
-        self.strategy_traders = self._init_s_traders(strategy_ids)
+        self.strategy_traders: List[StrategyTrader] = self._init_s_traders(strategy_ids)
         self.is_finished = False
         self._has_run_after_execute = False
         self._mj_d_klines = api.get_kline_serial(

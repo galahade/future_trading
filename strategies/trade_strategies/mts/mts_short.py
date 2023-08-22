@@ -228,7 +228,7 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
 
     def _get_profit_condition(self, dk) -> bool:
         '''返回是否满足止盈条件，并设置相关止盈参数'''
-        if self._is_trading():
+        if self.is_trading():
             e9, e22, e60, _, close, _, _, _, _ =\
                 self._get_indicators(dk)
             sc = self.ts.sold_condition

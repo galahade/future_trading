@@ -1,32 +1,42 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
+import logging
 from tqsdk.objs import Order
 from dao.odm.future_trade import (
     BottomOpenVolume, BottomOpenVolumeTip,
     BottomTradeStatus, MainOpenVolume,
-    MainTradeStatus, MainJointSymbolStatus, TradeStatus
+    MainTradeStatus, MainJointSymbolStatus, SwitchSymbolTradeRecord, TradeStatus
 )
+from dao.odm.tq_odm import TqOrder
 import dao.trade.trade_dao as dao
 import dao.trade.main_trade_dao as mdao
 import dao.trade.bottom_trade_dao as bdao
-from utils.common_tools import get_china_date_from_str, get_custom_symbol
-
+import dao.trade.tq_dao as tqdao
+import utils.common_tools as ctools
 from utils.tqsdk_tools import get_chinadt_from_ns
 from mongoengine.queryset.visitor import Q
 
+logger = logging.getLogger(__name__)
 
 def get_MJStatus(
         mj_symbol: str, current_symbol: str, next_symbol: str, direction: int,
         quote_date: str, strategy_name: str) -> MainJointSymbolStatus:
     '''根据主连合约获取策略交易状态，如果不存在则在数据库中创建
     '''
-    custom_symbol = get_custom_symbol(
-        mj_symbol, bool(direction), strategy_name)
-    mjss = dao.getMainJointSymbolStatus(custom_symbol)
+    mjss = _get_MJStatus(mj_symbol, direction, strategy_name)
     if mjss is None:
         mjss = dao.createMainJointSymbolStatus(
             mj_symbol, current_symbol, next_symbol, direction, strategy_name,
-            get_china_date_from_str(quote_date))
+            ctools.get_china_date_from_str(quote_date))
+    return mjss
+
+
+def _get_MJStatus(mj_symbol: str, direction: int, strategy_name: str
+                  ) -> MainJointSymbolStatus | None:
+    '''换月时获取主连合约状态信息'''
+    custom_symbol = ctools.get_custom_symbol(
+        mj_symbol, bool(direction), strategy_name)
+    mjss = dao.getMainJointSymbolStatus(custom_symbol)
     return mjss
 
 
@@ -35,7 +45,7 @@ def get_main_trade_status(
 ) -> MainTradeStatus:
     ts = mdao.getTradeStatus(symbol, direction)
     if ts is None:
-        dt = get_china_date_from_str(quote_date)
+        dt = ctools.get_china_date_from_str(quote_date)
         ts = mdao.createTradeStatus(
             custom_symbol, symbol, direction, dt)
     return ts
@@ -46,7 +56,7 @@ def get_bottom_trade_status(
 ) -> BottomTradeStatus:
     ts = bdao.getTradeStatus(symbol, direction)
     if ts is None:
-        dt = get_china_date_from_str(quote_date)
+        dt = ctools.get_china_date_from_str(quote_date)
         ts = bdao.createTradeStatus(
             custom_symbol, symbol, direction, dt)
     return ts
@@ -92,16 +102,59 @@ def close_ops(status: TradeStatus, c_type: int, c_message: str,
         return bdao.closePosAndUpdateStatus(status, c_dict)
 
 
-def switch_symbol(
-        status: TradeStatus, n_symbol: str, quote_time: str,
-        order: Order) -> TradeStatus:
-    '''重置合约交易状态信息, 将其合约变更至当前主力合约
+def update_switch_symbol_trade_record(record: SwitchSymbolTradeRecord):
+    '''更新换月交易记录
+    '''
+    dao.updateSwitchSymbolTradeRecord(record)
 
-    如果换月时产生平仓交易，则将其平仓信息记录至数据库'''
-    dt = get_china_date_from_str(quote_time)
-    if order is not None:
-        close_ops(status, 2, '换月', order)
-    return dao.switch_symbol(status, n_symbol, dt)
+def get_switch_symbol_trade_record(status: TradeStatus) -> SwitchSymbolTradeRecord:
+    '''获取换月交易记录
+    '''
+    try:
+        return dao.getSwitchSymbolTradeRecord(status.custom_symbol, status.symbol)
+    except Exception as e:
+        logger.warning("获取换月交易记录失败", e)
+        return None 
+
+def switch_symbol(
+        mj_status: MainJointSymbolStatus,
+        current_status: TradeStatus,
+        next_status: TradeStatus,
+        quote_date: str):
+    '''
+    如果合约在交易中，将该合约交易信息记录到换月交易信息表中。
+    更新主连合约状态表。
+    删除当前合约状态信息记录
+    '''
+    last_modified = datetime.now()
+    mj_status.last_modified = last_modified
+    # 为防止在数据库中的下一个交易状态与根据系统计算出的不一致，这里重新获取
+    # 如果不一致，则在最后将前一个交易状态清除。
+    if isinstance(current_status, MainTradeStatus):
+        next_status = get_main_trade_status(
+            mj_status.custom_symbol, mj_status.current_symbol,
+            current_status.direction, quote_date)
+    elif isinstance(current_status, BottomTradeStatus):
+        next_status = get_bottom_trade_status(
+            mj_status.custom_symbol, mj_status.current_symbol,
+            current_status.direction, quote_date) 
+    if current_status.trade_status == 1:
+        dao.createSwitchSymbolTradeRecord(
+            current_status, next_status,
+            ctools.get_china_date_from_str(quote_date)
+        )
+    next_status.last_modified = last_modified
+    new_status = None
+    if isinstance(current_status, MainTradeStatus):
+        new_status = get_main_trade_status(
+            mj_status.custom_symbol, mj_status.next_symbol,
+            current_status.direction, quote_date)
+        mdao.switch_symbol(mj_status, current_status, next_status, new_status)
+    elif isinstance(current_status, BottomTradeStatus):
+        new_status = get_bottom_trade_status(
+            mj_status.custom_symbol, mj_status.next_symbol,
+            current_status.direction, quote_date)
+        bdao.switch_symbol(mj_status, current_status, next_status, new_status)
 
 
 def _get_cdict_from_order(order: Order, c_type: int, c_message: str) -> dict:
@@ -167,3 +220,6 @@ def get_last7d_count(bovt: BottomOpenVolumeTip) -> int:
         Q(symbol=bovt.symbol) & Q(direction=bovt.direction) &
         Q(dkline_time__gte=bovt.dkline_time - timedelta(days=7))
     ).count()  # type: ignore
+
+def store_tq_order(order: Order) -> TqOrder:
+    return tqdao.createTqOrder(order)
