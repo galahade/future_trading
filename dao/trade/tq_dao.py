@@ -1,4 +1,4 @@
-from dao.odm.tq_odm import (TqOrder)
+from dao.odm.tq_odm import (TqOrder, TqTrade)
 from utils.tqsdk_tools import (
     get_chinadt_from_ns
 )
@@ -23,5 +23,18 @@ def createTqOrder(order: Order):
     tq_order.status = order.status
     tq_order.is_error = order.is_error
     tq_order.trade_price = order.trade_price
+    for trade in order.trade_records.values():
+        tq_trade = TqTrade()
+        tq_trade.order_id = trade.order_id
+        tq_trade.trade_id = trade.trade_id
+        tq_trade.exchange_trade_id = trade.exchange_trade_id
+        tq_trade.exchange_id = trade.exchange_id
+        tq_trade.instrument_id = trade.instrument_id
+        tq_trade.direction =  trade.direction
+        tq_trade.offset = trade.offset
+        tq_trade.price = trade.price
+        tq_trade.volume = trade.volume
+        tq_trade.trade_date_time = get_chinadt_from_ns(trade.trade_date_time)
+        tq_order.trade_list.append(tq_trade)
     tq_order.save()
 

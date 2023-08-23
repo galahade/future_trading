@@ -90,7 +90,7 @@ class MainOpenCondition(OpenCondition):
         self.minute_5_condition = None
 
 
-class SoldCondition(EmbeddedDocument):
+class CloseCondition(EmbeddedDocument):
     '''存储平仓用到的条件'''
     meta = {'allow_inheritance': True}
     # 止盈阶段
@@ -121,11 +121,11 @@ class SoldCondition(EmbeddedDocument):
         self.has_stop_tp = False
 
 
-class BottomSoldCondition(SoldCondition):
+class BottomSoldCondition(CloseCondition):
     '''摸底策略的平仓条件'''
 
 
-class MainSoldCondition(SoldCondition):
+class MainSoldCondition(CloseCondition):
     '''存储平仓用到的条件'''
 
 
@@ -165,6 +165,9 @@ class MainOpenVolume(TradePosBase):
     '''
     # 开仓条件
     open_condition = EmbeddedDocumentField(MainOpenCondition)
+    # 止盈止损条件
+    close_condition: CloseCondition = EmbeddedDocumentField(
+        CloseCondition)  # type: ignore
     # 是否平仓
     is_close = BooleanField(required=True, default=False)
     # 平仓信息
@@ -243,8 +246,8 @@ class TradeStatus(Document):
     last_modified: datetime = DateTimeField()  # type: ignore
     open_condition: OpenCondition = EmbeddedDocumentField(
         OpenCondition)  # type: ignore
-    sold_condition: SoldCondition = EmbeddedDocumentField(
-        SoldCondition)  # type: ignore
+    sold_condition: CloseCondition = EmbeddedDocumentField(
+        CloseCondition)  # type: ignore
     open_pos_info: TradePosBase = ReferenceField(
         TradePosBase)  # type: ignore
 
@@ -326,7 +329,7 @@ class SwitchSymbolTradeRecord(Document):
         TradePosBase)  # type: ignore
     # 换月平仓的交易记录
     close_volume_info: TradePosBase = ReferenceField(
-        TradePosBase)  # type: ignore 
+        TradePosBase)  # type: ignore
     # 换月开仓的交易记录
     next_open_volume_info: TradePosBase = ReferenceField(
         TradePosBase)  # type: ignore

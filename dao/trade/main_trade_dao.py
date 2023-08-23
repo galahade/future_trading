@@ -48,6 +48,7 @@ def openPosAndUpdateStatus(ts: MainTradeStatus, opd: dict) -> MainOpenVolume:
     '''保存开仓信息,并更新Main Symbol Trade Status 中的持仓数量等信息'''
     ov = MainOpenVolume()
     ov.open_condition = ts.open_condition
+    ov.close_condition = ts.sold_condition
     dao.save_open_volume(ts, opd, ov)
     return ov
 
