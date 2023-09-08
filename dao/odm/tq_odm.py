@@ -1,7 +1,14 @@
 from datetime import datetime
-from mongoengine import (DateTimeField, EmbeddedDocument,
-                         EmbeddedDocumentListField,
-                         Document, StringField, IntField, FloatField, BooleanField)
+from mongoengine import (
+    DateTimeField,
+    EmbeddedDocument,
+    EmbeddedDocumentListField,
+    Document,
+    StringField,
+    IntField,
+    FloatField,
+    BooleanField,
+)
 
 
 class TqTrade(EmbeddedDocument):

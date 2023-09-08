@@ -7,21 +7,20 @@ import dao.trade.trade_service as t_service
 
 
 class Trade_Tips_Sheet:
-
     def __init__(self, book: xw.Book, future_configs: list[FutureConfigInfo]):
         self.sheet = book.sheets.add()
         self.future_configs = future_configs
         sheet = self.sheet
-        sheet.range('A1').value = 'NO'
-        sheet.range('B1').value = '合约'
-        sheet.range('C1').value = '方向'
-        sheet.range('D1').value = '手数'
-        sheet.range('E1').value = '收盘价'
-        sheet.range('F1').value = '合约乘数'
-        sheet.range('G1').value = '开仓比例'
-        sheet.range('H1').value = '资金总额'
-        sheet.range('I1').value = '时间'
-        sheet.range('J1').value = '7日内提示次数'
+        sheet.range("A1").value = "NO"
+        sheet.range("B1").value = "合约"
+        sheet.range("C1").value = "方向"
+        sheet.range("D1").value = "手数"
+        sheet.range("E1").value = "收盘价"
+        sheet.range("F1").value = "合约乘数"
+        sheet.range("G1").value = "开仓比例"
+        sheet.range("H1").value = "资金总额"
+        sheet.range("I1").value = "时间"
+        sheet.range("J1").value = "7日内提示次数"
         # sheet.range('K1').value = '手数'
         # sheet.range('L1').value = '浮动盈亏'
         # sheet.range('M1').value = '手续费'
@@ -34,7 +33,7 @@ class Trade_Tips_Sheet:
         st = self.sheet
         st.range((self.count, 1)).value = self.count - 1
         st.range((self.count, 2)).value = bovt.symbol
-        st.range((self.count, 3)).value = '多' if bovt.direction else '空'
+        st.range((self.count, 3)).value = "多" if bovt.direction else "空"
         st.range((self.count, 4)).value = bovt.volume
         st.range((self.count, 5)).value = bovt.last_price
         st.range((self.count, 6)).value = self._get_multiplier(bovt)
@@ -59,7 +58,7 @@ class Trade_Tips_Sheet:
         return 0
 
     def _get_open_pos_scale(self, bovt: BottomOpenVolumeTip) -> float:
-        '''获取开仓比例'''
+        """获取开仓比例"""
         zl_symbol = get_zl_symbol(bovt.symbol)
         for config in self.future_configs:
             if config.symbol == zl_symbol:
@@ -75,10 +74,14 @@ class Trade_Tips_Sheet:
 
 
 class Trade_Tips_Book:
-
-    def __init__(self, db_name, future_configs: list[FutureConfigInfo], bovts: List[BottomOpenVolumeTip]):
+    def __init__(
+        self,
+        db_name,
+        future_configs: list[FutureConfigInfo],
+        bovts: List[BottomOpenVolumeTip],
+    ):
         self.wb = xw.Book()
-        self.name = f'{db_name}.xlsx'
+        self.name = f"{db_name}.xlsx"
         self.bovts = bovts
         self.sheet = Trade_Tips_Sheet(self.wb, future_configs)
 

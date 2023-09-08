@@ -1,8 +1,8 @@
 secrets/
-conf/
 tags
+# macos
+.DS_Store
 # vscode
-.vscode/
 .VSCodeCounter/
 # excel file
 *.xlsx
