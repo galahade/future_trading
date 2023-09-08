@@ -1,7 +1,37 @@
 from datetime import datetime
-from mongoengine import (DateTimeField, EmbeddedDocument,
-                         EmbeddedDocumentListField,
-                         Document, StringField, IntField, FloatField, BooleanField)
+from mongoengine import (
+    DateTimeField,
+    EmbeddedDocument,
+    EmbeddedDocumentListField,
+    Document,
+    StringField,
+    IntField,
+    FloatField,
+    BooleanField,
+)
+
+
+class TqTrade(EmbeddedDocument):
+    # 委托单ID, 对于一个用户的所有委托单，这个ID都是不重复的
+    order_id: str = StringField()
+    # 成交单ID
+    trade_id: str = StringField()
+    # 交易所单号
+    exchange_trade_id: str = StringField()
+    # 交易所
+    exchange_id: str = StringField()
+    # 交易所内的合约代码
+    instrument_id: str = StringField()
+    # 下单方向, BUY=买, SELL=卖
+    direction: str = StringField()
+    # 开平标志, OPEN=开仓, CLOSE=平仓, CLOSETODAY=平今
+    offset: str = StringField()
+    # 成交手数
+    volume: int = IntField()
+    # 成交价
+    price: float = FloatField()
+    # 下单时间
+    trade_date_time: datetime = DateTimeField()
 
 
 class TqTrade(EmbeddedDocument):

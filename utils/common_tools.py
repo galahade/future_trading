@@ -65,7 +65,8 @@ def examine_symbol(_symbol) -> List[str]:
         'DCE': re.compile(r'^(DCE).([a-z]{1,2})(\d{4})$'),
         'INE': re.compile(r'^(INE).([a-z]{2})(\d{4})$'),
         'SHFE': re.compile(r'^(SHFE).([a-z]{2})(\d{4})$'),
-        'KQ.m': re.compile(r'^(KQ.m@)(CFFEX|CZCE|DCE|INE|SHFE).(\w{1,2})$')
+        'GFEX': re.compile(r'^(GFEX).([a-z]{2})(\d{4})$'),
+        'KQ.m': re.compile(r'^(KQ.m@)(CFFEX|CZCE|DCE|INE|SHFE|GFEX).(\w{1,2})$')
     }
 
     for _, ipattern in pattern_dict_normal.items():

@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   app:
-    image: galahade/future-trading-test:v0.1
+    image: galahade/future-trading-test:v0.2
     working_dir: /app
     volumes:
       - ft_test-log-data:/log

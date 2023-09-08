@@ -1,7 +1,14 @@
 from typing import List
 from mongoengine import (
-    Document, EmbeddedDocument, StringField, FloatField,
-    BooleanField,  EmbeddedDocumentField, ListField, IntField)
+    Document,
+    EmbeddedDocument,
+    StringField,
+    FloatField,
+    BooleanField,
+    EmbeddedDocumentField,
+    ListField,
+    IntField,
+)
 
 
 class LongConfig(EmbeddedDocument):
@@ -50,7 +57,7 @@ class FutureConfigInfo(Document):
     switch_days: List[int] = ListField()  # type: ignore
     # 该品种的主力合约列表
     main_symbols: List[str] = ListField()  # type: ignore
-    long_config: LongConfig = EmbeddedDocumentField(
-        LongConfig)  # type: ignore
+    long_config: LongConfig = EmbeddedDocumentField(LongConfig)  # type: ignore
     short_config: ShortConfig = EmbeddedDocumentField(
-        ShortConfig)  # type: ignore
+        ShortConfig
+    )  # type: ignore

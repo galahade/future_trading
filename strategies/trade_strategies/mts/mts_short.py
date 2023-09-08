@@ -39,7 +39,7 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
                         logger.debug(content)
                         return
                 self.ts.sold_condition.has_stop_tp = True
-                service.update_trade_status(self.ts)  # type: ignore
+                service.update_trade_status(self.ts, trade_time)  # type: ignore
 
     def _match_dk_condition(self, is_in=True) -> bool:
         logger = self.logger

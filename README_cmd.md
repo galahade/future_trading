@@ -1,5 +1,10 @@
 # 构建运行环境
 
+## 升级依赖后的操作
+```
+pipenv requirements > requirements.txt
+```
+
 ## 构建镜像文件
 
 ### 构建开发/回测镜像
@@ -26,8 +31,8 @@ docker tag galahade/future-trading-dev galahade/future-trading-test:v0.1
 当开发工作完成后，将代码提交到`main`分支，然后构建测试环境，用来监测各品种的开仓情况。
 
 ```bash
-docker build --tag galahade/bottom-trade-test .
-docker tag galahade/bottom-trade-test galahade/bottom-trade-test:v0.1
+docker build --tag galahade/future-trading-dev .
+docker tag galahade/future-trading-dev galahade/future-trading-test:v0.2
 ```
 
 ### 构建生产镜像

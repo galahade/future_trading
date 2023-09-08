@@ -73,8 +73,8 @@ class Staker(ABC):
             for strader in filter(lambda t: t.short_mjs is not None, s_traders):
                 if isinstance(strader, MainStrategyTrader):
                     self.logger.info('主策略做空合约列表：')
-                    self.logger.info(f'当前合约：{strader.long_mjs.mjs_status.current_symbol}')
-                    self.logger.info(f'下一合约：{strader.long_mjs.mjs_status.next_symbol}')
+                    self.logger.info(f'当前合约：{strader.short_mjs.mjs_status.current_symbol}')
+                    self.logger.info(f'下一合约：{strader.short_mjs.mjs_status.next_symbol}')
 
     @abstractmethod
     def _init_future_configs(self) -> List[FutureConfigInfo]:
