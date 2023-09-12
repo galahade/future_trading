@@ -7,30 +7,29 @@ from strategies.trade_strategies.trade_strategies import TradeStrategy
 
 
 class MJMainStrategy(MJStrategy):
-    '''主连主策略基类
+    """主连主策略基类
 
     该类的子类包括两类：主连做多主策略和主连做空主策略
-    '''
+    """
 
     def _get_name(self) -> str:
-        return 'main'
+        return "main"
 
-    def execute_before_trade(self, is_in_trading: bool):
+    def execute_before_trade(self):
         pass
 
 
 class MJBottomStrategy(MJStrategy):
-    '''主连摸底策略基类
+    """主连摸底策略基类
 
     该类的子类包括两类：主连做多摸底策略和主连做空摸底策略
-    '''
+    """
 
     def _get_name(self) -> str:
-        return 'bottom'
+        return "bottom"
 
 
 class MJMainLongStrategy(MJMainStrategy):
-
     def _create_trade_strategy(self, symbol: str) -> TradeStrategy:
         return MainLongTradeStrategy(self.config, symbol)
 
@@ -39,7 +38,6 @@ class MJMainLongStrategy(MJMainStrategy):
 
 
 class MJMainShortStrategy(MJMainStrategy):
-
     def _create_trade_strategy(self, symbol: str) -> TradeStrategy:
         return MainShortTradeStrategy(self.config, symbol)
 
@@ -48,7 +46,6 @@ class MJMainShortStrategy(MJMainStrategy):
 
 
 class MJBottomLongStrategy(MJBottomStrategy):
-
     def _create_trade_strategy(self, symbol: str) -> TradeStrategy:
         return BottomLongTradeStrategy(self.config, symbol)
 
@@ -57,7 +54,6 @@ class MJBottomLongStrategy(MJBottomStrategy):
 
 
 class MJBottomShortStrategy(MJBottomStrategy):
-
     def _create_trade_strategy(self, symbol: str) -> TradeStrategy:
         return BottomShortTradeStrategy(self.config, symbol)
 

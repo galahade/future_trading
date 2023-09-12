@@ -3,6 +3,7 @@ tags
 # macos
 .DS_Store
 # vscode
+.vscode/settings.json
 .VSCodeCounter/
 # excel file
 *.xlsx

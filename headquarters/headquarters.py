@@ -124,3 +124,5 @@ class TradeManager:
         logger = self.logger
         logger.info("交易准备开始")
         self.staker.start_work()
+        logger.info("交易结束。")
+        self.tqApi.close()

@@ -1,19 +1,23 @@
+import pytest
+
 from dao.odm.future_trade import BottomOpenVolumeTip
 from dao.trade.bottom_trade_dao import createOpenVolumeTip
 from dao.trade.trade_service import (
-    del_trade_status, get_bottom_trade_status, del_trade_status, get_last_bottom_tips, get_last_bottom_tips_by_symbol
+    del_trade_status,
+    get_bottom_trade_status,
+    get_last_bottom_tip_by_symbol,
+    get_last_bottom_tips,
 )
 from headquarters.headquarters import DBA
-from utils.config_utils import get_system_config
 from utils.common_tools import get_china_tz_now
-import pytest
+from utils.config_utils import get_system_config
 
 
 @pytest.fixture
 def setup_db():
     sys_config = get_system_config()
     dba = DBA(sys_config)
-    dba.create_db('e144b3c1-2579-4bc5-a4c5-b61625367dcc')
+    dba.create_db("e144b3c1-2579-4bc5-a4c5-b61625367dcc")
 
 
 # def test_get_bovt_by_symbol(setup_db):
