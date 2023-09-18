@@ -71,10 +71,7 @@ class TradeStrategy(Strategy):
             self._try_open_pos()
 
     def execute_after_trade(self):
-        """在收盘后执行
-
-        当结束交易时，重新获取日线数据
-        """
+        """在收盘后执行"""
 
     def closeout(self, c_type: int, c_message: str) -> Order:
         """全部平仓, 可以安全调用，不会重复平仓
@@ -86,16 +83,20 @@ class TradeStrategy(Strategy):
     def open_pos(self, pos: int, o_message="") -> Order:
         """进行开仓相关操作，并记录开仓信息，输出日志"""
         order = self._trade_pos(pos, "OPEN")
-        self._set_open_pos_info(order)
+        t_price = (
+            self._get_current_price() if order.is_error else order.trade_price
+        )
+        self._set_open_pos_info(t_price)
+        order.trade_price = t_price
         self._store_open_pos_info(order)
-        log_str = "{} {} {} 开仓 价格：{} 数量：{}"
+        log_str = "{} {} {} 开仓 价格:{} 数量:{}"
         self.logger.info(
             log_str.format(
                 tq_tools.get_date_str(self._get_trade_date()),
                 self.ts.symbol,
                 self.ts.custom_symbol,
-                order.trade_price,
-                order.volume_orign,
+                t_price,
+                pos,
             )
         )
         if not self.config.is_backtest:
@@ -104,7 +105,7 @@ class TradeStrategy(Strategy):
                 self.ts.symbol,
                 bool(self._get_direction()),
                 pos,
-                order.trade_price,
+                t_price,
                 tq_tools.get_date_str(order.insert_date_time),
             )
         return order
@@ -284,10 +285,10 @@ class TradeStrategy(Strategy):
         """获取当前交易所交易价格"""
         return self.quote.last_price
 
-    def _set_open_pos_info(self, order: Order):
+    def _set_open_pos_info(self, trade_price: float):
         """设置开仓信息"""
         self._set_sold_condition()
-        self._set_sold_prices(order)
+        self._set_sold_prices(trade_price)
 
     @abstractmethod
     def _store_open_pos_info(self, order: Order):
@@ -326,7 +327,7 @@ class TradeStrategy(Strategy):
         """设置平仓条件"""
 
     @abstractmethod
-    def _set_sold_prices(self, order: Order):
+    def _set_sold_prices(self, trade_price: float):
         """设置平仓价格"""
 
     @abstractmethod

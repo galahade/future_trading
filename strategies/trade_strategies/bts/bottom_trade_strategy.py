@@ -22,6 +22,7 @@ class BottomTradeStrategy(TradeStrategy):
         self.tip = service.get_last_bottom_tip_by_symbol(
             self.ts.symbol, self._get_direction()
         )
+        self._macd_matched = False
 
     def fill_indicators_by_type(self, k_type: int):
         """根据K线类型填充指标 1:全部K线 2:日线 3:3小时线 4:30分钟线"""
@@ -174,8 +175,9 @@ class BottomTradeStrategy(TradeStrategy):
         self._generate_tips()
 
     def execute_after_trade(self):
-        """摸底策略收盘后执行一次该方法，用来检查并生成提示开仓品种"""
-        self._generate_tips()
+        """摸底策略收盘后执行一次该方法，
+        目前天勤返回的数据不支持收盘时进行摸底判断，因为该时段收盘价不是最终收盘价
+        故不使用收盘生成摸底策略"""
 
     def _generate_tips(self):
         if self._can_get_tips():

@@ -20,7 +20,8 @@ docker build --tag galahade/future-trading-dev .
 docker build --no-cache --tag galahade/future-trading-dev .
 # 构建完成镜像后进行连接测试
 docker run -e TZ=Asia/Shanghai --rm -ti galahade/future-trading-dev /bin/bash
-docker run --rm -ti galahade/future-trading-dev /bin/bash
+docker run --rm -ti --entrypoint /bin/bash galahade/future-trading-dev 
+docker run --rm -ti  galahade/future-trading-dev 
 # 对镜像打标签
 docker tag galahade/future-trading-dev galahade/future-trading-dev:v0.1
 docker tag galahade/future-trading-dev galahade/future-trading-test:v0.1
@@ -83,8 +84,8 @@ docker run -it -v future-trading-log-data:/log --rm bash:4.4
 
 ```bash
 # 开发环境
-docker stack deploy -c docker-compose.yml future-trading-dev
-docker stack rm future-trading-dev
+docker stack deploy -c docker/dock-compose/docker-compose.yml ft-dev
+docker stack rm ft-dev
 
 # 调试环境
 docker stack deploy -c docker-compose-debug.yml ft-debug

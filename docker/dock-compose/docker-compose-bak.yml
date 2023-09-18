@@ -1,19 +1,13 @@
 version: "3.8"
 services:
-  ofelia:
-    image: mcuadros/ofelia:latest
-    depends_on:
-      - app
-    command: daemon --docker
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
   app:
     image: galahade/future-trading-dev:latest
     working_dir: /app
     volumes:
       - ".:/app"
       - future-trading-log-data:/log
+    depends_on:
+      - mongo
     environment:
       SYSTEM_CONFIG_PATH: /run/secrets/system_config_file
       SYSTEM_CONFIG_BT_PATH: /run/secrets/system_config_file
@@ -25,19 +19,25 @@ services:
       - system_config_bt_file
       - future_config_file
       - future_config_bt_file
-    labels:
-      ofelia.enabled: "true"
-      ofelia.job-exec.test-cron.schedule: "0 0 19 15 * *"
-      ofelia.job-exec.test-cron.command: "entrypoint.sh"
+  # mongo:
+  #   image: mongo
+  #   ports:
+  #     - 26018:27017
+  #   volumes:
+  #     - bottom-trade-mongo-dev-data:/data/db
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: example
 volumes:
+  # bottom-trade-mongo-dev-data:
   future-trading-log-data:
     external: true
 secrets:
   system_config_file:
-    file: ../../secrets/system_config_dev.yaml
+    file: secrets/system_config_dev.yaml
   system_config_bt_file:
-    file: ../../secrets/system_config_backtest_dev.yaml
+    file: secrets/system_config_backtest_dev.yaml
   future_config_file:
-    file: ../../conf/trade_config_dev.yaml
+    file: conf/trade_config_dev.yaml
   future_config_bt_file:
-    file: ../../conf/trade_config_backtest_dev.yaml
+    file: conf/trade_config_backtest_dev.yaml

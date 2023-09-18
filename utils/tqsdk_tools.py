@@ -133,4 +133,4 @@ def get_break_time(quote: Quote) -> int:
     为wait_update函数的dead_line生成值
     该函数的前提假设是 quote.datetime 已经处于14:59:59
     """
-    return tafunc.time_to_s_timestamp(quote.datetime) + 60 * 10
+    return tafunc.time_to_s_timestamp(quote.datetime) + 60 * 30

@@ -1,5 +1,3 @@
-from tqsdk.objs import Order
-
 import dao.trade.trade_service as service
 import strategies.tools as tools
 import utils.tqsdk_tools as tq_tools
@@ -343,8 +341,8 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
     def _set_sold_condition(self):
         super()._set_sold_condition()
         s_c = self.ts.sold_condition
-        d_c_id = self.ts.open_condition.daily_condition.condition_id  # type: ignore
-        h_c_id = self.ts.open_condition.hourly_condition.condition_id  # type: ignore
+        d_c_id = self.ts.open_condition.daily_condition.condition_id
+        h_c_id = self.ts.open_condition.hourly_condition.condition_id
         if d_c_id in [1, 2]:
             s_c.take_profit_cond = 1
         elif d_c_id == 5:
@@ -354,28 +352,28 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         elif d_c_id in [3, 4] and h_c_id == 3:
             s_c.take_profit_cond = 4
 
-    def _set_sold_prices(self, order: Order):
+    def _set_sold_prices(self, trade_price: float):
         s_c = self.ts.sold_condition
         s_c.stop_loss_price = self._calc_price(
-            order.trade_price,
+            trade_price,
             self.config.f_info.long_config.stop_loss_scale,
             False,
         )
         if s_c.take_profit_cond in [1, 2, 3]:
             s_c.tp_started_point = self._calc_price(
-                order.trade_price,
+                trade_price,
                 self.config.f_info.long_config.profit_start_scale_1,
                 True,
             )
         elif s_c.take_profit_cond == 4:
             s_c.tp_started_point = self._calc_price(
-                order.trade_price,
+                trade_price,
                 self.config.f_info.long_config.profit_start_scale_2,
                 True,
             )
         self.logger.info(
             f"{self._get_trade_date_str()} {self.symbol} "
-            f"<做多>开仓价:{order.trade_price}"
+            f"<做多>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"
         )

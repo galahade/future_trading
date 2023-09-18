@@ -162,6 +162,18 @@ def get_trade_date(trade_time: datetime) -> date:
         return (trade_time + timedelta(days=1)).date()
 
 
+def is_after_trade() -> bool:
+    """根据当前时间判断目前所处时段是交易结束时段还是交易开始前时段
+    交易结束时段: 15:00 - 19:20
+    交易开始前时段: 19:20 - 21:00"""
+    now = datetime.now(tz_utc_8)
+    hour = now.hour
+    minutes = now.minute
+    if (hour >= 15 and hour < 19) or (hour == 19 and minutes < 20):
+        return True
+    return False
+
+
 class LoggerGetter:
     def __get__(self, obj, objtype=None) -> logging.Logger:
         return logging.getLogger(obj.__class__.__name__)

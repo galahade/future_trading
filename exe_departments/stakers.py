@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -47,7 +48,7 @@ class Staker(ABC):
         if tr.has_run_pre_opt and tr.has_run_post_opt and tr.has_trade:
             logger.info(
                 f"本交易日 {tr.trade_date} 交易工作已完成."
-                "系统将于晚19点后开始运行下一交易日的工作".center(100, "*")
+                "系统将于晚19:30后开始运行下一交易日的工作".center(100, "*")
             )
             l_service.save_trade_record(tr)
         else:
@@ -132,15 +133,18 @@ class Staker(ABC):
             # 如果非交易日该方法应该不会返回。（有待验证）
             self._api.wait_update()
             while True:
-                if tq_tools.is_trading_period(self._api, self._common_quote):
+                if c_tools.is_after_trade():
+                    break
+                elif tq_tools.is_trading_period(self._api, self._common_quote):
                     self._api.wait_update()
+                    for trader in traders:
+                        trader.execute_trade()
                 else:
+                    # 等待1分钟后尝试更新行情，并在等待超过15:10后返回
+                    time.sleep(60)
                     self._api.wait_update(
                         deadline=tq_tools.get_break_time(self._common_quote)
                     )
-                    break
-                for trader in traders:
-                    trader.execute_trade()
             tr.has_trade = True
             l_service.save_trade_record(tr)
             logger.info("交易任务已结束，开始进行收盘操作".center(100, "*"))

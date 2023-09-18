@@ -12,6 +12,12 @@ defaults:
     - 1
     - 5
     - 10
+  # 菜籽合约列表
+  main_symbols_rs: &main_symbols_rs
+    - 7
+    - 8
+    - 9
+    - 11
   # 有色金属主力合约列表
   main_symbols_nfm: &main_symbols_nfm
     - 1
@@ -80,7 +86,7 @@ futures:
     is_active: 1
     multiple: 10
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_odd
     long: *long
     short: *short
   - symbol: KQ.m@DCE.cs
@@ -128,7 +134,7 @@ futures:
     is_active: 1
     multiple: 10
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_nfm
     long: *long
     short: *short
   - symbol: KQ.m@DCE.jm
@@ -208,7 +214,7 @@ futures:
     is_active: 1
     multiple: 5
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_odd
     long: *long
     short: *short
 # 郑州商品交易所
@@ -281,7 +287,7 @@ futures:
     is_active: 1
     multiple: 5
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_nfm
     long: *long
     short: *short
   - symbol: KQ.m@CZCE.SR
@@ -300,21 +306,20 @@ futures:
     main_symbols: *main_symbols_c
     long: *long
     short: *short
-  # 主连合约不稳定
-  # - symbol: KQ.m@CZCE.RS
-  #   name: 菜籽
-  #   is_active: 1
-  #   multiple: 10
-  #   switch_days: *switch_days
-  #   main_symbols: *main_symbols_c
-  #   long: *long
-  #   short: *short
+  - symbol: KQ.m@CZCE.RS
+    name: 菜籽
+    is_active: 1
+    multiple: 10
+    switch_days: *switch_days
+    main_symbols: *main_symbols_rs
+    long: *long
+    short: *short
   - symbol: KQ.m@CZCE.SF
     name: 硅铁
     is_active: 1
     multiple: 5
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_nfm
     long: *long
     short: *short
   - symbol: KQ.m@CZCE.UR
@@ -387,7 +392,7 @@ futures:
     is_active: 1
     multiple: 10
     switch_days: *switch_days
-    main_symbols: *main_symbols_c
+    main_symbols: *main_symbols_nfm
     long: *long
     short: *short
   - symbol: KQ.m@SHFE.hc

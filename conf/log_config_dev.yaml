@@ -11,11 +11,13 @@ handlers:
     formatter: precise
     stream: ext://sys.stdout
   file:
-    class: logging.FileHandler
+    class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: precise
-    filename: trade.log
-    mode: w
+    filename: /log/future_trade.log
+    when: D
+    backupCount: 10
+    atTime: 15:30
     encoding: utf-8
 loggers:
   __main__:
@@ -44,4 +46,4 @@ loggers:
     propagate: 0
 root:
   level: DEBUG
-  handlers: [console]
+  handlers: [console, file]

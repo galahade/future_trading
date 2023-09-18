@@ -7,10 +7,14 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get purge -y imagemagick imagemagick-6-common \
     && apt-get -y install --no-install-recommends tini
 
+USER root
 WORKDIR /app
 COPY requirements.txt requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3 install -r requirements.txt
+COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 ENV TZ Asia/Shanghai
 COPY . .
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD [ "sleep", "infinity" ]

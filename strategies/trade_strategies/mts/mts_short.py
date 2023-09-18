@@ -1,5 +1,3 @@
-from tqsdk.objs import Order
-
 import dao.trade.trade_service as service
 import strategies.tools as tools
 import utils.tqsdk_tools as tq_tools
@@ -262,21 +260,21 @@ class MainShortTradeStrategy(MainTradeStrategy, ShortTradeStrategy):
                 matched = True
         return matched
 
-    def _set_sold_prices(self, order: Order):
+    def _set_sold_prices(self, trade_price: float):
         s_c = self.ts.sold_condition
         s_c.stop_loss_price = self._calc_price(
-            order.trade_price,
+            trade_price,
             self.config.f_info.short_config.stop_loss_scale,  # type: ignore
             True,
         )
         s_c.tp_started_point = self._calc_price(
-            order.trade_price,
+            trade_price,
             self.config.f_info.short_config.profit_start_scale,  # type: ignore
             False,
         )
         self.logger.info(
             f"{self._get_trade_date_str()} {self.symbol}"
-            f"<做空>开仓价:{order.trade_price}"
+            f"<做空>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"
         )

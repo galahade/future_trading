@@ -1,5 +1,3 @@
-from tqsdk.objs import Order
-
 import strategies.tools as tools
 from dao.odm.future_trade import BottomOpenCondition
 from strategies.trade_strategies.bts.bottom_trade_strategy import (
@@ -20,8 +18,7 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
     def _match_dk_condition(self) -> bool:
         logger = self.logger
         kline = self._get_last_dkline()
-        if tools.has_set_k_attr(kline, "l_matched"):
-            return kline.l_matched
+        result = False
         s = self.ts.symbol
         (
             e5,
@@ -39,36 +36,23 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
         )
         if e5 < e20 < e60 and close > e5:
             if macd > 0:
-                self._set_klines_value(
-                    self._d_klines, kline.name, "l_macd_matched", True
-                )
-            else:
-                self._set_klines_value(
-                    self._d_klines, kline.name, "l_macd_matched", False
-                )
+                self._macd_matched = True
             content = log_str.format(
                 trade_time, s, k_date_str_short, e5, e20, e60, close, macd
             )
             logger.debug(content)
-            self._set_klines_value(
-                self._d_klines, kline.name, "l_matched", True
-            )
+            result = True
             if self.ts.open_condition is None:
                 self.ts.open_condition = BottomOpenCondition()
             self._set_open_condition(
                 kline, self.ts.open_condition.daily_condition  # type: ignore
             )
-        else:
-            self._set_klines_value(
-                self._d_klines, kline.name, "l_matched", False
-            )
-        return self._d_klines.loc[kline.name, "l_matched"]  # type: ignore
+        return result
 
     def _match_3h_condition(self) -> bool:
         logger = self.logger
         kline = self._get_last_last_3h_kline()
-        if tools.has_set_k_attr(kline, "l_matched"):
-            return kline.l_matched
+        result = False
         _, _, _, macd, _, trade_time, _, k_date_str = self._get_indicators(
             kline
         )
@@ -78,23 +62,16 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
                 trade_time, self.ts.symbol, k_date_str, macd
             )
             logger.debug(content)
-            self._set_klines_value(
-                self._3h_klines, kline.name, "l_matched", True
-            )
+            result = True
             self._set_open_condition(
                 kline, self.ts.open_condition.hourly_condition
-            )  # type: ignore
-        else:
-            self._set_klines_value(
-                self._3h_klines, kline.name, "l_matched", False
             )
-        return self._3h_klines.loc[kline.name, "l_matched"]  # type: ignore
+        return result
 
     def _match_30m_condition(self) -> bool:
         logger = self.logger
         kline = self._get_last_last_30m_kline()
-        if tools.has_set_k_attr(kline, "l_matched"):
-            return kline.l_matched
+        result = False
         (
             e5,
             e20,
@@ -110,10 +87,8 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
             "ema60:{} 收盘:{} MACD:{}"
         )
         if close > e60 and e5 > e60:
-            if self._is_within_distance(kline, self._is_dk_macd_matched()):
-                self._set_klines_value(
-                    self._30m_klines, kline.name, "l_matched", True
-                )
+            if self._is_within_distance(kline, self._macd_matched):
+                result = True
                 content = log_str.format(
                     trade_time,
                     self.ts.symbol,
@@ -127,32 +102,24 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
                 logger.debug(content)
                 self._set_open_condition(
                     kline, self.ts.open_condition.minute_30_condition
-                )  # type: ignore
-            else:
-                self._set_klines_value(
-                    self._30m_klines, kline.name, "l_matched", False
                 )
-        else:
-            self._set_klines_value(
-                self._30m_klines, kline.name, "l_matched", False
-            )
-        return self._30m_klines.loc[kline.name, "l_matched"]  # type: ignore
+        return result
 
-    def _set_sold_prices(self, order: Order):
+    def _set_sold_prices(self, trade_price: float):
         s_c = self.ts.sold_condition
         s_c.stop_loss_price = self._calc_price(
-            order.trade_price,
+            trade_price,
             self.config.f_info.short_config.stop_loss_scale,
             False,
         )
         s_c.tp_started_point = self._calc_price(
-            order.trade_price,
+            trade_price,
             self.config.f_info.short_config.profit_start_scale,
             True,
         )
         self.logger.info(
             f"{self._get_trade_date_str()} {self.symbol} "
-            f"<做空>开仓价:{order.trade_price}"
+            f"<做空>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"
         )
