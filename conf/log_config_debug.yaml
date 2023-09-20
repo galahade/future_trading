@@ -10,37 +10,30 @@ handlers:
     level: DEBUG
     formatter: precise
     stream: ext://sys.stdout
-  file:
-    class: logging.FileHandler
-    level: DEBUG
-    formatter: precise
-    filename: trade.log
-    mode: w
-    encoding: utf-8
 loggers:
   __main__:
     level: DEBUG
-    handlers: [console, file]
+    handlers: [console]
     propagate: 0
   TqApi:
     level: WARNING
-    handlers: [file]
+    handlers: [console]
     propagate: 0
   TqApi.TqConnect:
     level: WARNING
-    handlers: [console, file]
+    handlers: [console]
     propagate: 0
   TqApi.TqAuth:
     level: WARNING
-    handlers: [file]
+    handlers: [console]
     propagate: 0
   TqApi.TqSim:
     level: WARNING
-    handlers: [file]
+    handlers: [console]
     propagate: 0
   websockets:
     level: WARNING
-    handlers: [file]
+    handlers: [console]
     propagate: 0
 root:
   level: DEBUG

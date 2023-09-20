@@ -7,6 +7,7 @@ from tqsdk import TqApi
 import dao.config_service as c_service
 import dao.trade_log.log_service as l_service
 import utils.common_tools as c_tools
+import utils.email_tools as email_tools
 import utils.tqsdk_tools as tq_tools
 from dao.odm.future_config import FutureConfigInfo
 from dao.odm.trade_log import InvolvedSymbol, SymbolList, TradeRecord
@@ -122,6 +123,7 @@ class Staker(ABC):
             logger.info("盘前提示结束 开始进入交易".center(100, "*"))
             tr.has_run_pre_opt = True
             l_service.save_trade_record(tr)
+            email_tools.send_bottom_email()
         else:
             logger.info("盘前提示信息已于之前产生 请访问数据库查看 开始进入交易".center(100, "*"))
 

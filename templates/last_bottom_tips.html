@@ -1,0 +1,18 @@
+{# templates/last_bottom_tips.html #}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h2>{{ today }}-摸底策略-{{ env_name }}</h2>
+        <ul>
+        {% for tip in tips %}
+            <li>
+                <em>{{ tip.symbol }}:</em> {{ tip.direction }} -- {{ tip.volume }} -- {{ tip.last_price}} -- {{ tip.dkline_time}}
+            </li>
+        {% endfor %}
+        </ul>
+    </body>
+</html>
