@@ -6,11 +6,12 @@ ARG USERNAME=root
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     && echo "$SNIPPET" >> "/root/.bashrc"
 
-# install jless (because its not available at https://containers.dev/features at time of writing)
-# RUN NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
-    # && (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /root/.profile \
-    # && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" \
-    # && brew install jless
+# Install git vim fontconfig wget less
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    # Remove imagemagick due to https://security-tracker.debian.org/tracker/CVE-2019-10131
+    && apt-get purge -y imagemagick imagemagick-6-common \
+    && apt-get -y install --no-install-recommends git vim fontconfig wget less
+
 COPY .devcontainer/docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT [ "/docker-entrypoint.sh" ]

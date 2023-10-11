@@ -23,6 +23,7 @@
     },
     "mounts": [
         "source=devcontainer-bashhistory,target=/commandhistory,type=volume",
+        "source=devcontainer-teminal-font,target=/root/.local/share/fonts,type=volume",
         "source=${localWorkspaceFolderBasename}-venv,target=${containerWorkspaceFolder}/.venv,type=volume"
     ],
     // Configure tool-specific properties.
