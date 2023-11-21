@@ -1,9 +1,11 @@
 from typing import List
+
+import xlwings as xw
+
+import dao.trade.trade_service as t_service
 from dao.odm.future_config import FutureConfigInfo
 from dao.odm.future_trade import BottomOpenVolumeTip
 from utils.common_tools import get_zl_symbol
-import xlwings as xw
-import dao.trade.trade_service as t_service
 
 
 class Trade_Tips_Sheet:
@@ -66,7 +68,8 @@ class Trade_Tips_Sheet:
         return 0.0
 
     def finish(self):
-        st = self.sheet
+        pass
+        # st = self.sheet
         # st.range((self.count, 2)).value = '总盈亏'
         # st.range((self.count, 3)).value = self.total_profit
         # st.range((self.count, 4)).value = '最大回撤'

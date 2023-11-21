@@ -1,12 +1,21 @@
 from datetime import datetime
 from typing import List
+
 from mongoengine import (
-    EmbeddedDocument, StringField, IntField, BooleanField, FloatField,
-    ListField, DateTimeField, Document, EmbeddedDocumentField)
+    BooleanField,
+    DateTimeField,
+    Document,
+    EmbeddedDocument,
+    EmbeddedDocumentField,
+    FloatField,
+    IntField,
+    ListField,
+    StringField,
+)
 
 
 class Account(EmbeddedDocument):
-    meta = {'allow_inheritance': True}
+    meta = {"allow_inheritance": True}
     user_name = StringField(required=True)
     password = StringField(required=True)
 
@@ -19,21 +28,17 @@ class RohonAccount(Account):
 
 
 class BacktestDays(EmbeddedDocument):
-    start_date: datetime = DateTimeField()  # type: ignore
-    end_date: datetime = DateTimeField()  # type: ignore
+    start_date: datetime = DateTimeField()
+    end_date: datetime = DateTimeField()
 
 
 class TradeConfigInfo(Document):
-    direction: int = IntField(required=True, default=2)  # type: ignore
-    is_backtest: bool = BooleanField(
-        required=True, default=False)  # type: ignore
-    account_type: int = IntField(required=True, default=0)  # type: ignore
-    account_balance: float = FloatField(default=100000.00)  # type: ignore
-    strategy_ids: List[int] = ListField(
-        IntField(), default=[1, 2])  # type: ignore
-    backtest_days: BacktestDays = EmbeddedDocumentField(
-        BacktestDays)  # type: ignore
-    tq_account: Account = EmbeddedDocumentField(Account)  # type: ignore
-    rohon_account: RohonAccount = EmbeddedDocumentField(
-        RohonAccount)  # type: ignore
-    date_time: datetime = DateTimeField()  # type: ignore
+    direction: int = IntField(required=True, default=2)
+    is_backtest: bool = BooleanField(required=True, default=False)
+    account_type: int = IntField(required=True, default=0)
+    account_balance: float = FloatField(default=10000000.00)
+    strategy_ids: List[int] = ListField(IntField(), default=[1, 2])
+    backtest_days: BacktestDays = EmbeddedDocumentField(BacktestDays)
+    tq_account: Account = EmbeddedDocumentField(Account)
+    rohon_account: RohonAccount = EmbeddedDocumentField(RohonAccount)
+    date_time: datetime = DateTimeField()

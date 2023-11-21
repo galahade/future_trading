@@ -1,15 +1,16 @@
 from datetime import datetime
+
 from mongoengine import (
+    BooleanField,
+    DateTimeField,
     Document,
     EmbeddedDocument,
-    StringField,
-    IntField,
-    FloatField,
-    DateTimeField,
-    BooleanField,
     EmbeddedDocumentField,
+    FloatField,
+    IntField,
     ListField,
     ReferenceField,
+    StringField,
     queryset_manager,
 )
 
@@ -22,13 +23,13 @@ class IndicatorValues(EmbeddedDocument):
     ema60 = FloatField()
     macd = FloatField()
     close = FloatField()
-    kline_time: datetime = DateTimeField()  # type: ignore
+    kline_time: datetime = DateTimeField()
 
     def clear(self):
         self.ema60 = 0.0
         self.macd = 0.0
         self.close = 0.0
-        self.kline_time = None  # type: ignore
+        self.kline_time = None
 
 
 class BottomIndicatorValues(IndicatorValues):
@@ -63,32 +64,28 @@ class OpenCondition(EmbeddedDocument):
     """开仓满足的条件，包括：日线条件，3小时条件， 30分钟条件 的类型"""
 
     meta = {"allow_inheritance": True}
-    daily_condition: IndicatorValues = EmbeddedDocumentField(
-        IndicatorValues
-    )  # type: ignore
-    hourly_condition: IndicatorValues = EmbeddedDocumentField(
-        IndicatorValues
-    )  # type: ignore
+    daily_condition: IndicatorValues = EmbeddedDocumentField(IndicatorValues)
+    hourly_condition: IndicatorValues = EmbeddedDocumentField(IndicatorValues)
     minute_30_condition: IndicatorValues = EmbeddedDocumentField(
         IndicatorValues
-    )  # type: ignore
+    )
 
     def clear(self):
-        self.daily_condition = None  # type: ignore
-        self.hourly_condition = None  # type: ignore
-        self.minute_30_condition = None  # type: ignore
+        self.daily_condition = None
+        self.hourly_condition = None
+        self.minute_30_condition = None
 
 
 class BottomOpenCondition(OpenCondition):
     daily_condition: BottomIndicatorValues = EmbeddedDocumentField(
         BottomIndicatorValues
-    )  # type: ignore
+    )
     hourly_condition: BottomIndicatorValues = EmbeddedDocumentField(
         BottomIndicatorValues
-    )  # type: ignore
+    )
     minute_30_condition: BottomIndicatorValues = EmbeddedDocumentField(
         BottomIndicatorValues
-    )  # type: ignore
+    )
 
 
 class MainOpenCondition(OpenCondition):
@@ -97,16 +94,16 @@ class MainOpenCondition(OpenCondition):
     # 开仓条件
     daily_condition: MainIndicatorValues | None = EmbeddedDocumentField(
         MainIndicatorValues
-    )  # type: ignore
+    )
     hourly_condition: MainIndicatorValues | None = EmbeddedDocumentField(
         MainIndicatorValues
-    )  # type: ignore
+    )
     minute_30_condition: MainIndicatorValues | None = EmbeddedDocumentField(
         MainIndicatorValues
-    )  # type: ignore
+    )
     minute_5_condition: MainIndicatorValues | None = EmbeddedDocumentField(
         MainIndicatorValues
-    )  # type: ignore
+    )
 
     def clear(self):
         super().clear()
@@ -118,21 +115,21 @@ class CloseCondition(EmbeddedDocument):
 
     meta = {"allow_inheritance": True}
     # 止盈阶段
-    take_profit_stage: int = IntField(default=0)  # type: ignore
+    take_profit_stage: int = IntField(default=0)
     # 该交易适用的止盈条件
-    take_profit_cond: int = IntField(default=0)  # type: ignore
+    take_profit_cond: int = IntField(default=0)
     # 止损价格
-    stop_loss_price: float = FloatField(default=0.0)  # type: ignore
+    stop_loss_price: float = FloatField(default=0.0)
     # 是否已经提高止损价
-    has_increase_slp: bool = BooleanField(default=False)  # type: ignore
+    has_increase_slp: bool = BooleanField(default=False)
     # 止损原因
-    sl_reason: str = StringField(default="止损")  # type: ignore
+    sl_reason: str = StringField(default="止损")
     # 止盈监控开始价格
-    tp_started_point: float = FloatField(default=0.0)  # type: ignore
+    tp_started_point: float = FloatField(default=0.0)
     # 是否进入止盈阶段
-    has_enter_tp: bool = BooleanField(default=False)  # type: ignore
+    has_enter_tp: bool = BooleanField(default=False)
     # 是否停止跟踪止盈
-    has_stop_tp: bool = BooleanField(default=False)  # type: ignore
+    has_stop_tp: bool = BooleanField(default=False)
 
     def clear(self):
         self.take_profit_stage = 0
@@ -145,14 +142,6 @@ class CloseCondition(EmbeddedDocument):
         self.has_stop_tp = False
 
 
-class BottomSoldCondition(CloseCondition):
-    """摸底策略的平仓条件"""
-
-
-class MainSoldCondition(CloseCondition):
-    """存储平仓用到的条件"""
-
-
 class TradePosBase(Document):
     """开平仓信息的基类"""
 
@@ -162,7 +151,7 @@ class TradePosBase(Document):
     # 交易方向：0: 做空，1: 做多
     direction = IntField(required=True, min_value=0, max_value=1)
     # 开仓价格
-    trade_price: float = FloatField()  # type: ignore
+    trade_price: float = FloatField()
     # 开仓数量
     volume = IntField()
     # 交易时间
@@ -192,13 +181,36 @@ class MainOpenVolume(TradePosBase):
     # 开仓条件
     open_condition = EmbeddedDocumentField(MainOpenCondition)
     # 止盈止损条件
-    close_condition: CloseCondition = EmbeddedDocumentField(
-        CloseCondition
-    )  # type: ignore
+    close_condition: CloseCondition = EmbeddedDocumentField(CloseCondition)
     # 是否平仓
     is_close = BooleanField(required=True, default=False)
     # 平仓信息
     close_pos_infos = ListField(ReferenceField(MainCloseVolume))
+
+
+class MainDailyConditionTip(Document):
+    id = StringField(primary_key=True)
+    custom_symbol = StringField(required=True)
+    # 期货合约
+    symbol: str = StringField(required=True)
+    # 交易方向：0: 做空，1: 做多
+    direction = IntField(required=True, min_value=0, max_value=1)
+    ema9 = FloatField()
+    ema22 = FloatField()
+    ema60 = FloatField()
+    macd = FloatField()
+    close = FloatField()
+    open = FloatField()
+    condition_id = IntField()
+    kline_time: datetime = DateTimeField()
+    last_modified = DateTimeField()
+
+    @queryset_manager
+    def get_last_tips(doc_cls, queryset):
+        result = queryset.order_by("-kline_time").first()
+        if result is not None:
+            return queryset.filter(kline_time=result.kline_time)
+        return None
 
 
 class BottomOpenVolumeTip(Document):
@@ -207,11 +219,11 @@ class BottomOpenVolumeTip(Document):
     id = StringField(primary_key=True)
     custom_symbol = StringField(required=True)
     # 期货合约
-    symbol: str = StringField(required=True)  # type: ignore
+    symbol: str = StringField(required=True)
     # 是否需要在下一交易日开仓
     need_trade: bool = BooleanField(required=True, default=False)
     # 最近一根日k线时间
-    dkline_time: datetime = DateTimeField()  # type: ignore
+    dkline_time: datetime = DateTimeField()
     # 交易方向：0: 做空，1: 做多
     direction = IntField(required=True, min_value=0, max_value=1)
     # 上一交易日收盘价格
@@ -255,56 +267,47 @@ class TradeStatus(Document):
         "indexes": [{"fields": ["symbol", "direction"], "unique": True}],
     }
     # 主连合约+交易策略+交易方向
-    custom_symbol: str = StringField(required=True)  # type: ignore
-    symbol: str = StringField(required=True)  # type: ignore
+    custom_symbol: str = StringField(required=True)
+    symbol: str = StringField(required=True)
     # 交易方向：0: 做空，1: 做多
-    direction: int = IntField(
-        required=True, min_value=0, max_value=1
-    )  # type: ignore
+    direction: int = IntField(required=True, min_value=0, max_value=1)
     # 交易状态：0: 未开始，1: 交易中，2: 已平仓
-    trade_status: int = IntField(default=0)  # type: ignore
+    trade_status: int = IntField(default=0)
     # 持仓数量, 已开仓数量 - 已平仓数量
-    carrying_volume: int = IntField(default=0)  # type: ignore
+    carrying_volume: int = IntField(default=0)
     # 开始交易时间
-    start_time: datetime = DateTimeField()  # type: ignore
+    start_time: datetime = DateTimeField()
     # 结束交易时间
-    end_time: datetime = DateTimeField()  # type: ignore
-    last_modified: datetime = DateTimeField()  # type: ignore
-    open_condition: OpenCondition = EmbeddedDocumentField(
-        OpenCondition
-    )  # type: ignore
-    sold_condition: CloseCondition = EmbeddedDocumentField(
-        CloseCondition
-    )  # type: ignore
-    open_pos_info: TradePosBase = ReferenceField(TradePosBase)  # type: ignore
+    end_time: datetime = DateTimeField()
+    last_modified: datetime = DateTimeField()
+    open_pos_info: TradePosBase = ReferenceField(TradePosBase)
+
+    def __repr__(self):
+        debug_str = "{} custom symbol:{} symbol:{} direction:{} trade status:{} carrying volume:{}"
+        return debug_str.format(
+            self.__class__.__name__,
+            self.custom_symbol,
+            self.symbol,
+            self.direction,
+            self.trade_status,
+            self.carrying_volume,
+        )
 
     def closeout(self, end_time: datetime):
         """平仓"""
         self.trade_status = 2
         self.carrying_volume = 0
         self.end_time = end_time
-        self.open_pos_info = None  # type: ignore
+        self.open_pos_info = None
         self.last_modified = end_time
-        self._clear_conditions()
-
-    def _clear_conditions(self):
-        """清除开仓和平仓条件"""
-        self.open_condition.clear()
-        self.sold_condition.clear()
 
 
 class MainTradeStatus(TradeStatus):
-    # 开仓信息
-    open_condition = EmbeddedDocumentField(MainOpenCondition)  # type: ignore
-    sold_condition = EmbeddedDocumentField(MainSoldCondition)  # type: ignore
-    open_pos_info = ReferenceField(MainOpenVolume)  # type: ignore
+    open_pos_info = ReferenceField(MainOpenVolume)
 
 
 class BottomTradeStatus(TradeStatus):
-    # 开仓信息
-    open_condition = EmbeddedDocumentField(BottomOpenCondition)  # type: ignore
-    sold_condition = EmbeddedDocumentField(BottomSoldCondition)  # type: ignore
-    open_pos_info = ReferenceField(BottomOpenVolume)  # type: ignore
+    open_pos_info = ReferenceField(BottomOpenVolume)
 
 
 class MainJointSymbolStatus(Document):
@@ -339,10 +342,10 @@ class SwitchSymbolTradeRecord(Document):
     id: str = StringField(primary_key=True)
     custom_symbol: str = StringField(required=True)
     # 期货合约
-    current_symbol: str = StringField(required=True)  # type: ignore
-    next_symbol: str = StringField(required=True)  # type: ignore
+    current_symbol: str = StringField(required=True)
+    next_symbol: str = StringField(required=True)
     # 交易时间
-    quote_time: datetime = DateTimeField()  # type: ignore
+    quote_time: datetime = DateTimeField()
     # 交易方向：0: 做空，1: 做多
     direction: int = IntField(required=True, min_value=0, max_value=1)
     # 平仓完成状态：0: 未完成，1: 已完成
@@ -352,17 +355,11 @@ class SwitchSymbolTradeRecord(Document):
     # 下一个合约的开仓状态
     next_open_status: bool = BooleanField(default=False)
     # 换月前的交易记录
-    current_open_volume_info: TradePosBase = ReferenceField(
-        TradePosBase
-    )  # type: ignore
+    current_open_volume_info: TradePosBase = ReferenceField(TradePosBase)
     # 换月平仓的交易记录
-    close_volume_info: TradePosBase = ReferenceField(
-        TradePosBase
-    )  # type: ignore
+    close_volume_info: TradePosBase = ReferenceField(TradePosBase)
     # 换月开仓的交易记录
-    next_open_volume_info: TradePosBase = ReferenceField(
-        TradePosBase
-    )  # type: ignore
+    next_open_volume_info: TradePosBase = ReferenceField(TradePosBase)
     last_modified: datetime = DateTimeField()
 
     @queryset_manager

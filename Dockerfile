@@ -17,4 +17,4 @@ RUN chmod +x /docker-entrypoint.sh
 ENV TZ Asia/Shanghai
 COPY . .
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD [ "sleep", "infinity" ]
+CMD ["sleep", "infinity"]

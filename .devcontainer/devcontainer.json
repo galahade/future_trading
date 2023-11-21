@@ -46,8 +46,12 @@
                     "--profile",
                     "black"
                 ],
-                "flake8.args": ["--ignore=E501"],
-                "black-formatter.args": ["--line-length=79"],
+                "flake8.args": [
+                    "--ignore=E501"
+                ],
+                "black-formatter.args": [
+                    "--line-length=79"
+                ],
                 // terminal
                 "terminal.integrated.defaultProfile.linux": "zsh",
                 "terminal.integrated.scrollback": 2000,

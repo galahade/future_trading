@@ -7,13 +7,22 @@ from tqsdk.objs import Order
 import dao.trade.trade_service as service
 import strategies.tools as tools
 import utils.tqsdk_tools as tq_tools
-from dao.odm.future_trade import MainIndicatorValues, MainTradeStatus
+from dao.odm.future_trade import (
+    CloseCondition,
+    MainIndicatorValues,
+    MainOpenCondition,
+    MainTradeStatus,
+)
+from strategies.entity import StrategyConfig
 from strategies.trade_strategies.trade_strategies import TradeStrategy
 from utils.common_tools import LoggerGetter
 
 
 class MainTradeStrategy(TradeStrategy):
     logger = LoggerGetter()
+
+    def __init__(self, config: StrategyConfig, symbol: str):
+        super().__init__(config, symbol)
 
     def fill_indicators_by_type(self, k_type: int):
         """根据K线类型填充指标 1:全部K线 2:日线 3:3小时线 4:30分钟线 5:5分钟线"""
@@ -34,7 +43,7 @@ class MainTradeStrategy(TradeStrategy):
     def _can_open_pos(self) -> bool:
         """判断是否可以开仓"""
         logger = self.logger
-        if not self.is_trading():
+        if not self.is_trading:
             if self._match_dk_condition():
                 if self._match_3h_condition():
                     if self._match_30m_condition():
@@ -46,29 +55,29 @@ class MainTradeStrategy(TradeStrategy):
     def _try_stop_loss(self):
         """当满足止损条件时，进行止损操作"""
         logger = self.logger
-        trade_date_str = self._get_trade_date_str()
-        price = self._get_current_price()
+        trade_date_str = self.trade_date_str
+        price = self.current_price
         log_str = "{} {} {} {} 现价:{} 止损价:{} 手数:{}"
         if self._has_match_stop_loss():
-            pos = self._get_carry_pos()
+            pos = self.carrying_volume
             content = log_str.format(
                 trade_date_str,
-                self.ts.symbol,
-                self.ts.custom_symbol,
-                self.ts.sold_condition.sl_reason,
+                self.symbol,
+                self.trade_status.custom_symbol,
+                self.close_condition.sl_reason,
                 price,
-                self.ts.sold_condition.stop_loss_price,
+                self.close_condition.stop_loss_price,
                 pos,
             )
             logger.info(content)
-            self.closeout(0, self.ts.sold_condition.sl_reason)
+            self.closeout(0, self.close_condition.sl_reason)
 
-    def _get_trade_status(self, symbol: str) -> MainTradeStatus:
+    def _init_trade_status(self, symbol: str) -> MainTradeStatus:
         """获取交易状态"""
         return service.get_main_trade_status(
             self.config.custom_symbol,
             symbol,
-            self._get_direction(),
+            self.direction,
             self.config.quote.datetime,
         )
 
@@ -83,7 +92,7 @@ class MainTradeStrategy(TradeStrategy):
         macd = kline["MACD.close"]
         close = kline.close
         open_price = kline.open
-        trade_time = self._get_trade_date()
+        trade_time = self.trade_date
         kline_time_str_short = tq_tools.get_date_str_short(kline.datetime)
         kline_time_str = tq_tools.get_date_str(kline.datetime)
         return (
@@ -98,13 +107,20 @@ class MainTradeStrategy(TradeStrategy):
             kline_time_str,
         )
 
+    def _generate_tips(self):
+        if not self.is_trading:
+            if self._match_dk_condition():
+                service.store_daily_condition_tip(
+                    self.trade_status, self.open_condition
+                )
+
     def is_within_2days(self) -> bool:
         """判断30分钟线上一次满足条件时是否在规定时间之内
 
         上一次满足的条件为：30分钟收盘价 < EMA60 < EAM22
         """
         logger = self.logger
-        trade_time = self._get_trade_date_str()
+        trade_time = self.trade_date_str
         log_str = (
             "{} {} <做空> 当前日k线生成时间:{} 最近一次30分钟收盘价与EMA60"
             "交叉时间{} 交叉前一根30分钟K线ema60:{} close:{}"
@@ -125,7 +141,7 @@ class MainTradeStrategy(TradeStrategy):
                 if i == 199:
                     break
                 else:
-                    t30m_kline = self._30m_klines.iloc[i + 1]  # type: ignore
+                    t30m_kline = self._30m_klines.iloc[i + 1]
                     _, et22, et60, _, _, _, _, _, _ = self._get_indicators(
                         t30m_kline
                     )
@@ -148,7 +164,7 @@ class MainTradeStrategy(TradeStrategy):
             l_kline = l_klines.iloc[-1]
             logger.debug(
                 log_str.format(
-                    trade_time, self.ts.symbol, c_date, temp_date, e60, close
+                    trade_time, self.symbol, c_date, temp_date, e60, close
                 )
             )
             logger.debug(
@@ -208,39 +224,39 @@ class MainTradeStrategy(TradeStrategy):
         return False
 
     def _set_open_condition(
-        self, kline, cond_num: int, indiatorValues: MainIndicatorValues
+        self,
+        kline,
+        cond_num: int,
+        indicatorValues: MainIndicatorValues,
     ):
         """设置开仓条件"""
         (
-            e9,
-            e22,
-            e60,
-            macd,
-            close,
-            open_p,
-            trade_time,
+            indicatorValues.ema9,
+            indicatorValues.ema22,
+            indicatorValues.ema60,
+            indicatorValues.macd,
+            indicatorValues.close,
+            indicatorValues.open,
+            indicatorValues.kline_time,
             _,
             _,
         ) = self._get_indicators(kline)
-        indiatorValues.ema9 = e9
-        indiatorValues.ema22 = e22
-        indiatorValues.ema60 = e60
-        indiatorValues.macd = macd
-        indiatorValues.close = close
-        indiatorValues.open = open_p
-        indiatorValues.kline_time = trade_time
-        indiatorValues.condition_id = cond_num
+        indicatorValues.condition_id = cond_num
 
-    def _set_sold_condition(self):
-        s_c = self.ts.sold_condition
-        s_c.take_profit_stage = 0
+    def _set_close_condition(self):
+        self.close_condition.take_profit_stage = 0
 
     def _store_open_pos_info(self, order: Order):
-        service.open_main_pos(self.ts, order)
+        service.open_main_pos(
+            self.trade_status, self.open_condition, self.close_condition, order
+        )
+
+    def _get_strategy_name(self) -> int:
+        return "主策略"
 
     @abstractmethod
     def _match_dk_condition(self) -> bool:
-        """做多日线条件检测"""
+        """日线条件检测"""
 
     @abstractmethod
     def _match_3h_condition(self) -> bool:
@@ -269,3 +285,34 @@ class MainTradeStrategy(TradeStrategy):
     @abstractmethod
     def _get_profit_condition(self) -> int:
         """返回止盈条件序号，并存储到数据库"""
+
+    @property
+    def open_condition(self) -> MainOpenCondition:
+        if self.is_trading:
+            return self.trade_status.open_pos_info.open_condition
+        if self._open_condition is None:
+            self._open_condition = MainOpenCondition(
+                daily_condition=MainIndicatorValues(),
+                hourly_condition=MainIndicatorValues(),
+                minute_30_condition=MainIndicatorValues(),
+                minute_5_condition=MainIndicatorValues(),
+            )
+        return self._open_condition
+
+    @property
+    def close_condition(self) -> CloseCondition:
+        """获取平仓条件"""
+        if self.is_trading:
+            return self.trade_status.open_pos_info.close_condition
+        if self._close_condition is None:
+            self._close_condition = CloseCondition()
+        return self._close_condition
+
+    @property
+    def trade_status(self) -> MainTradeStatus:
+        return self._ts
+
+    # @close_condition.setter
+    # def close_condition(self, val):
+    #     """为 close_condition 赋值"""
+    #     self.close_condition = val

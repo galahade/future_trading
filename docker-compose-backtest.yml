@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  app:
+    image: galahade/future-trading-backtest:latest
+    working_dir: /app
+    deploy:
+      restart_policy:
+        condition: none
+    volumes:
+      # - ".:/app"
+      - ft-backtest-log-data:/log
+    environment:
+      SYSTEM_CONFIG_PATH: /run/secrets/system_config_file
+      FUTURE_CONFIG_PATH: /run/secrets/future_config_file
+      ENV_NAME: backtest
+      # 天勤云账号的子账号数，可以使不同运行环境相互独立测试
+      TQKQ_NUMBER: 1
+    secrets:
+      - system_config_file
+      - future_config_file
+networks:
+  default:
+    name: ft-backtest-db_database
+    external: true
+volumes:
+  ft-backtest-log-data:
+    external: true
+secrets:
+  system_config_file:
+    file: secrets/system_config_backtest.yaml
+  future_config_file:
+    file: conf/trade_config_backtest_oil.yaml

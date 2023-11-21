@@ -1,0 +1,38 @@
+{# templates/last_bottom_tips.html #}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+</head>
+
+<body>
+    <h2>{{ today }}-盘前提示-{{ env_name }}</h2>
+    <h3>摸底策略</h3>
+    <ul>
+        <li>
+            <em>合约</em> -- 方向 -- 交易手数 -- 最新收盘价 -- 最近日线时间
+        </li>
+        {% for tip in b_tips %}
+        <li>
+            <em>{{ tip.symbol }}</em> -- {{ tip.direction }} -- {{ tip.volume }} -- {{ tip.last_price}} -- {{
+            tip.dkline_time}}
+        </li>
+        {% endfor %}
+    </ul>
+    <h3>主策略日线提示</h3>
+    <ul>
+        <li>
+            <em>合约</em> -- 方向 -- ema9 -- ema22 -- ema60 -- macd -- 开盘价 -- 收盘价 -- 日线条件 -- 日线时间
+        </li>
+        {% for tip in daily_condition_tips %}
+        <li>
+            <em>{{ tip.symbol }}</em> -- {{ tip.direction }} -- {{ tip.ema9 }} -- {{ tip.ema22}} -- {{ tip.ema60}} --
+            {{tip.macd}} -- {{tip.open}} -- {{tip.close}} -- {{tip.condition_id}} -- {{tip.kline_time}}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+
+</html>

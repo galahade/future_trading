@@ -1,5 +1,4 @@
 import strategies.tools as tools
-from dao.odm.future_trade import BottomOpenCondition
 from strategies.trade_strategies.bts.bottom_trade_strategy import (
     BottomTradeStrategy,
 )
@@ -10,16 +9,16 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
     """摸底做多交易策略"""
 
     def _is_dk_macd_matched(self) -> bool:
-        kline = self._get_last_dkline()
+        kline = self.last_daily_kline
         if tools.has_set_k_attr(kline, "l_macd_matched"):
             return bool(kline.l_matched)
         return False
 
     def _match_dk_condition(self) -> bool:
         logger = self.logger
-        kline = self._get_last_dkline()
+        kline = self.last_daily_kline
         result = False
-        s = self.ts.symbol
+        s = self.symbol
         (
             e5,
             e20,
@@ -42,10 +41,8 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
             )
             logger.debug(content)
             result = True
-            if self.ts.open_condition is None:
-                self.ts.open_condition = BottomOpenCondition()
             self._set_open_condition(
-                kline, self.ts.open_condition.daily_condition  # type: ignore
+                kline, self.open_condition.daily_condition
             )
         return result
 
@@ -58,13 +55,11 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
         )
         log_str = "{} {} <摸底做多> 满足3小时 K线时间:{} MACD:{}"
         if macd > 0:
-            content = log_str.format(
-                trade_time, self.ts.symbol, k_date_str, macd
-            )
+            content = log_str.format(trade_time, self.symbol, k_date_str, macd)
             logger.debug(content)
             result = True
             self._set_open_condition(
-                kline, self.ts.open_condition.hourly_condition
+                kline, self.open_condition.hourly_condition
             )
         return result
 
@@ -91,7 +86,7 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
                 result = True
                 content = log_str.format(
                     trade_time,
-                    self.ts.symbol,
+                    self.symbol,
                     k_date_str_short,
                     e5,
                     e20,
@@ -101,12 +96,12 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
                 )
                 logger.debug(content)
                 self._set_open_condition(
-                    kline, self.ts.open_condition.minute_30_condition
+                    kline, self.open_condition.minute_30_condition
                 )
         return result
 
-    def _set_sold_prices(self, trade_price: float):
-        s_c = self.ts.sold_condition
+    def _set_close_prices(self, trade_price: float):
+        s_c = self.close_condition
         s_c.stop_loss_price = self._calc_price(
             trade_price,
             self.config.f_info.short_config.stop_loss_scale,
@@ -118,7 +113,7 @@ class BottomLongTradeStrategy(BottomTradeStrategy, LongTradeStrategy):
             True,
         )
         self.logger.info(
-            f"{self._get_trade_date_str()} {self.symbol} "
+            f"{self.trade_date_str} {self.symbol} "
             f"<做空>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"

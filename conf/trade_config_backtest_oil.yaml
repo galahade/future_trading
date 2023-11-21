@@ -1,0 +1,102 @@
+defaults:
+  switch_days: &switch_days
+    - 20
+    - 45
+  # 普通品种主力合约列表
+  main_symbols_c: &main_symbols_c
+    - 1
+    - 5
+    - 9
+  # 螺纹主力合约列表
+  main_symbols_rb: &main_symbols_rb
+    - 1
+    - 5
+    - 10
+  # 有色金属主力合约列表
+  main_symbols_nfm: &main_symbols_nfm
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+  # 贵金属主力合约列表
+  main_symbols_pm: &main_symbols_pm
+    - 2
+    - 6
+    - 8
+    - 10
+    - 12
+  long: &long
+    base_scale: 0.03
+    stop_loss_scale: 1
+    profit_start_scale_1: 3
+    promote_scale_1: 6
+    promote_target_1: 3
+    profit_start_scale_2: 1.5
+    promote_scale_2: 3
+    promote_target_2: 1
+  short: &short
+    base_scale: 0.03
+    stop_loss_scale: 1
+    profit_start_scale: 8
+    promote_scale: 3
+    promote_target: 1
+open_pos_scale: 0.2
+futures:
+  # 大连商品交易所
+  - symbol: KQ.m@DCE.a
+    name: 豆一
+    is_active: 1
+    multiple: 10
+    switch_days: *switch_days
+    main_symbols: *main_symbols_c
+    long: *long
+    short: *short
+  - symbol: KQ.m@DCE.m
+    name: 豆粕
+    is_active: 1
+    multiple: 10
+    switch_days: *switch_days
+    main_symbols: *main_symbols_c
+    long: *long
+    short: *short
+  # - symbol: KQ.m@DCE.p
+  #   name: 棕榈
+  #   is_active: 1
+  #   multiple: 10
+  #   switch_days: *switch_days
+  #   main_symbols: *main_symbols_c
+  #   long: *long
+  #   short: *short
+  # - symbol: KQ.m@DCE.y
+  #   name: 豆油
+  #   is_active: 1
+  #   multiple: 10
+  #   switch_days: *switch_days
+  #   main_symbols: *main_symbols_c
+  #   long: *long
+  #   short: *short
+# 郑州商品交易所
+# - symbol: KQ.m@CZCE.OI
+#   name: 菜油
+#   is_active: 1
+#   multiple: 10
+#   switch_days: *switch_days
+#   main_symbols: *main_symbols_c
+#   long: *long
+#   short: *short
+# - symbol: KQ.m@CZCE.RM
+#   name: 菜粕
+#   is_active: 1
+#   multiple: 10
+#   switch_days: *switch_days
+#   main_symbols: *main_symbols_c
+#   long: *long
+#   short: *short

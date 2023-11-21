@@ -64,7 +64,7 @@ defaults:
     promote_target: 1
 open_pos_scale: 0.2
 futures:
-# 大连商品交易所
+  # 大连商品交易所
   - symbol: KQ.m@DCE.a
     name: 豆一
     is_active: 1
@@ -217,7 +217,7 @@ futures:
     main_symbols: *main_symbols_odd
     long: *long
     short: *short
-# 郑州商品交易所
+  # 郑州商品交易所
   - symbol: KQ.m@CZCE.AP
     name: 苹果
     is_active: 1
@@ -306,14 +306,15 @@ futures:
     main_symbols: *main_symbols_c
     long: *long
     short: *short
-  - symbol: KQ.m@CZCE.RS
-    name: 菜籽
-    is_active: 1
-    multiple: 10
-    switch_days: *switch_days
-    main_symbols: *main_symbols_rs
-    long: *long
-    short: *short
+  # RS408合约无法获得
+  # - symbol: KQ.m@CZCE.RS
+  #   name: 菜籽
+  #   is_active: 1
+  #   multiple: 10
+  #   switch_days: *switch_days
+  #   main_symbols: *main_symbols_rs
+  #   long: *long
+  #   short: *short
   - symbol: KQ.m@CZCE.SF
     name: 硅铁
     is_active: 1
@@ -330,7 +331,7 @@ futures:
     main_symbols: *main_symbols_c
     long: *long
     short: *short
-# 上海期货交易所
+  # 上海期货交易所
   - symbol: KQ.m@SHFE.cu
     name: 沪铜
     is_active: 1
@@ -451,7 +452,7 @@ futures:
     main_symbols: *main_symbols_nfm
     long: *long
     short: *short
-# 上海国际能源交易中心
+  # 上海国际能源交易中心
   - symbol: KQ.m@INE.sc
     name: 原油
     is_active: 1
@@ -460,7 +461,7 @@ futures:
     main_symbols: *main_symbols_nfm
     long: *long
     short: *short
-# 中国金融期货交易所
+  # 中国金融期货交易所
   # - symbol: KQ.m@CFFEX.TF
   #   name: 5年期国债期货
   #   is_active: 1
@@ -509,7 +510,7 @@ futures:
   #   main_symbols: *main_symbols_nfm
   #   long: *long
   #   short: *short
-# 广州商品交易所
+  # 广州商品交易所
   - symbol: KQ.m@GFEX.lc
     name: 碳酸锂
     is_active: 1

@@ -1,15 +1,15 @@
-import uuid
-from datetime import datetime
 from typing import Optional
 
 from mongoengine import connect
-from tqsdk import TqApi, TqAuth, TqBacktest, TqKq
+from tqsdk import TqApi, TqAuth, TqBacktest, TqKq, TqSim
 
 import dao.config_service as c_service
 import utils.config_utils as c_utils
 from dao.odm.trade_config import TradeConfigInfo
 from exe_departments.stakers import BTStaker, RealStaker
-from utils.common_tools import LoggerGetter, sendSystemStartupMsg, tz_utc_8
+
+# from utils import global_var as gvar
+from utils.common_tools import LoggerGetter, tz_utc_8
 from utils.config_utils import SystemConfig
 
 
@@ -22,8 +22,8 @@ class Commander:
         TradeManager：交易主管。负责利用系统提供的资源开展交易工作。
     """
 
-    def __init__(self, is_backtest: bool):
-        _config = c_utils.get_system_config(is_backtest)
+    def __init__(self):
+        _config = c_utils.get_system_config()
         self._dba = DBA(_config)
         self._dba.create_db()
         self._account_manager = AccountManager(
@@ -42,21 +42,23 @@ class DBA:
     def __init__(self, config: SystemConfig):
         mongo_config = config.mongo_config
         self._trade_config = config.trade_config
-        host = mongo_config.host  # type: ignore
-        port = mongo_config.port  # type: ignore
+        host = mongo_config.host
+        port = mongo_config.port
         if hasattr(mongo_config, "user"):
-            user = mongo_config.user  # type: ignore
-            password = mongo_config.password  # type: ignore
+            user = mongo_config.user
+            password = mongo_config.password
             self._url = f"mongodb://{user}:{password}@{host}:{port}/"
         else:
             self._url = f"mongodb://{host}:{port}/"
 
     def create_db(self, db_name: Optional[str] = None):
+        # if db_name is None:
+        #     if self._trade_config.is_backtest:
+        #         db_name = str(uuid.uuid4())
+        #     else:
+        #         db_name = "future_trade"
         if db_name is None:
-            if self._trade_config.is_backtest:  # type: ignore
-                db_name = str(uuid.uuid4())
-            else:
-                db_name = "future_trade"
+            db_name = "future_trade"
         db_url = f"{self._url}{db_name}?authSource=admin"
         connect(host=db_url, tz_aware=True, tzinfo=tz_utc_8)
 
@@ -64,24 +66,24 @@ class DBA:
 class AccountManager:
     def __init__(self, trade_config: TradeConfigInfo):
         self.trade_config = trade_config
-        # rohon_config = sc_odm.rohon_config()
         _tq_acc = trade_config.tq_account
         self._acc_type = trade_config.account_type
+        #  0:模拟账户 1:天勤实盘
         if self._acc_type == 1:
+            # 尚未启用该类型账户
             self.trade_account = None
-        elif self._acc_type == 2:
-            self.trade_account = None
-            # self._trade_account = TqRohon(td_url, broker_id, app_id,
-            # auth_code, # user_name, password)
         else:
             print(trade_config.account_balance)
             # TqSim 账户的交易信息保存在内存中，当平仓时会因为系统重启而发生平仓手数不足的错误
-            # TqKq 是将交易信息保存在服务端，是否会出现问题待测试。
+            # TqKq 是将交易信息保存在服务端，需要使用不同number来根据不同环境分配资金。
             # self.trade_account = TqSim(init_balance=trade_config.account_balance)
-            self.trade_account = TqKq()
-        self.tq_auth = TqAuth(
-            _tq_acc.user_name, _tq_acc.password
-        )  # type: ignore
+            if self.trade_config.is_backtest:
+                self.trade_account = TqSim(init_balance=10000000)
+            else:
+                # 以下功能需要购买专业版
+                # self.trade_account = TqKq(number=gvar.TQKQ_NUMBER)
+                self.trade_account = TqKq()
+        self.tq_auth = TqAuth(_tq_acc.user_name, _tq_acc.password)
 
     def is_real_account(self):
         return bool(self._acc_type)
@@ -118,11 +120,9 @@ class TradeManager:
             self.staker = RealStaker(
                 self.tqApi, direction, trade_config.strategy_ids
             )
-        sendSystemStartupMsg(datetime.now(), trade_config)
 
     def start_work(self):
         logger = self.logger
         logger.info("交易准备开始")
         self.staker.start_work()
-        logger.info("交易结束。")
         self.tqApi.close()

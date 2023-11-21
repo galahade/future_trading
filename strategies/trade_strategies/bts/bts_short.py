@@ -9,8 +9,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         """做空日线条件检测, 合约交易日必须大于等于60天"""
         logger = self.logger
         result = False
-        kline = self._get_last_dkline()
-        s = self.ts.symbol
+        kline = self.last_daily_kline
         (
             e5,
             e20,
@@ -29,18 +28,23 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
             if macd < 0:
                 self._macd_matched = True
             content = log_str.format(
-                trade_time, s, k_date_str_short, e5, e20, e60, close, macd
+                trade_time,
+                self.symbol,
+                k_date_str_short,
+                e5,
+                e20,
+                e60,
+                close,
+                macd,
             )
             logger.debug(content)
             result = True
             try:
                 self._set_open_condition(
-                    kline, self.ts.open_condition.daily_condition
+                    kline, self.open_condition.daily_condition
                 )
             except ValueError as e:
-                self.logger.debug(
-                    f"{self.ts.symbol}-{self.ts.direction}:设置开仓条件出现错误"
-                )
+                self.logger.debug(f"{self.symbol}-{self.direction}:设置开仓条件出现错误")
                 raise e
         return result
 
@@ -53,13 +57,11 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         )
         log_str = "{} {} <摸底做空> 满足3小时 K线时间:{} MACD:{}"
         if macd < 0:
-            content = log_str.format(
-                trade_time, self.ts.symbol, k_date_str, macd
-            )
+            content = log_str.format(trade_time, self.symbol, k_date_str, macd)
             logger.debug(content)
             result = True
             self._set_open_condition(
-                kline, self.ts.open_condition.hourly_condition
+                kline, self.open_condition.hourly_condition
             )
         return result
 
@@ -67,7 +69,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
         logger = self.logger
         kline = self._get_last_last_30m_kline()
         result = False
-        s = self.ts.symbol
+        s = self.symbol
         (
             e5,
             e20,
@@ -90,12 +92,12 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
                 )
                 logger.debug(content)
                 self._set_open_condition(
-                    kline, self.ts.open_condition.minute_30_condition
+                    kline, self.open_condition.minute_30_condition
                 )
         return result
 
-    def _set_sold_prices(self, trade_price: float):
-        s_c = self.ts.sold_condition
+    def _set_close_prices(self, trade_price: float):
+        s_c = self.close_condition
         s_c.stop_loss_price = self._calc_price(
             trade_price,
             self.config.f_info.short_config.stop_loss_scale,
@@ -107,7 +109,7 @@ class BottomShortTradeStrategy(BottomTradeStrategy, ShortTradeStrategy):
             False,
         )
         self.logger.info(
-            f"{self._get_trade_date_str()} {self.symbol} "
+            f"{self.trade_date_str} {self.symbol} "
             f"<做空>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"

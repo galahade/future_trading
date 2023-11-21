@@ -15,9 +15,6 @@ class MJMainStrategy(MJStrategy):
     def _get_name(self) -> str:
         return "main"
 
-    def execute_before_trade(self):
-        pass
-
 
 class MJBottomStrategy(MJStrategy):
     """主连摸底策略基类

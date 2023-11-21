@@ -1,19 +1,23 @@
 from datetime import datetime
+
 from dao.odm.future_trade import (
-    CloseVolume, SwitchSymbolTradeRecord, TradeStatus,
-    MainJointSymbolStatus,  MainTradeStatus, BottomTradeStatus)
+    CloseVolume,
+    MainJointSymbolStatus,
+    SwitchSymbolTradeRecord,
+    TradeStatus,
+)
 from utils.common_tools import get_custom_symbol
-import dao.trade.main_trade_dao as mdao
-import dao.trade.bottom_trade_dao as bdao
+
 
 def updateSwitchSymbolTradeRecord(sstr: SwitchSymbolTradeRecord):
-    '''更新换月交易记录'''
+    """更新换月交易记录"""
     sstr.save(cascade=True)
 
+
 def createSwitchSymbolTradeRecord(
-        current_status: TradeStatus,
-        next_status: TradeStatus, quote_time: datetime):
-    '''创建换月交易记录'''
+    current_status: TradeStatus, next_status: TradeStatus, quote_time: datetime
+):
+    """创建换月交易记录"""
     sstr = SwitchSymbolTradeRecord()
     sstr.custom_symbol = current_status.custom_symbol
     sstr.current_symbol = current_status.symbol
@@ -26,17 +30,19 @@ def createSwitchSymbolTradeRecord(
     sstr.last_modified = quote_time
 
 
-def getSwitchSymbolTradeRecord(custom_symbol: str, symbol: str
-                               ) -> SwitchSymbolTradeRecord:
-    '''获取换月交易记录
-    '''
-    sstr = SwitchSymbolTradeRecord.objects(
-        custom_symbol=custom_symbol, current_symbol=symbol,
-        current_close_status=False).first()  # type: ignore 
-    
+def getSwitchSymbolTradeRecord(
+    custom_symbol: str, symbol: str
+) -> SwitchSymbolTradeRecord:
+    """获取换月交易记录"""
+    return SwitchSymbolTradeRecord.objects(
+        custom_symbol=custom_symbol,
+        current_symbol=symbol,
+        current_close_status=False,
+    ).first()
+
 
 def updateTradeStatus(ts: TradeStatus):
-    '''更新交易状态信息到数据库中'''
+    """更新交易状态信息到数据库中"""
     ts.save(cascade=True)
 
 
@@ -45,16 +51,20 @@ def deleteTradeStatus(ts: TradeStatus):
 
 
 def getMainJointSymbolStatus(custom_symbol: str) -> MainJointSymbolStatus:
-    '''根据主连合约获取策略交易状态，如果不存在则在数据库中创建
-    '''
-    return MainJointSymbolStatus.objects(custom_symbol=custom_symbol).first()  # type: ignore
+    """根据主连合约获取策略交易状态，如果不存在则在数据库中创建"""
+    return MainJointSymbolStatus.objects(custom_symbol=custom_symbol).first()
 
 
 def createMainJointSymbolStatus(
-        mj_symbol: str, current_symbol: str, next_symbol: str, direction: int,
-        s_name: str, dt: datetime) -> MainJointSymbolStatus:
-    '''根据传入参数创建主连合约状态信息并保存到数据库中,
-    参数 direction: 0:多头, 1:空头. '''
+    mj_symbol: str,
+    current_symbol: str,
+    next_symbol: str,
+    direction: int,
+    s_name: str,
+    dt: datetime,
+) -> MainJointSymbolStatus:
+    """根据传入参数创建主连合约状态信息并保存到数据库中,
+    参数 direction: 0:多头, 1:空头."""
     mjss = MainJointSymbolStatus()
     mjss.custom_symbol = get_custom_symbol(mj_symbol, bool(direction), s_name)
     mjss.main_joint_symbol = mj_symbol
@@ -67,19 +77,19 @@ def createMainJointSymbolStatus(
 
 
 def save_close_volume(ts: TradeStatus, cpd: dict, cv: CloseVolume):
-    '''主策略和摸底策略共用方法，用来保存'''
+    """主策略和摸底策略共用方法，用来保存"""
     opi = ts.open_pos_info
     cv.symbol = opi.symbol
     cv.direction = opi.direction
-    cv.trade_price = cpd['trade_price']
-    cv.volume = cpd['volume']
-    cv.trade_time = cpd['trade_time']
-    cv.order_id = cpd['order_id']
-    cv.last_modified = cpd['trade_time']
-    cv.close_type = cpd['close_type']
-    cv.close_message = cpd['close_message']
+    cv.trade_price = cpd["trade_price"]
+    cv.volume = cpd["volume"]
+    cv.trade_time = cpd["trade_time"]
+    cv.order_id = cpd["order_id"]
+    cv.last_modified = cpd["trade_time"]
+    cv.close_type = cpd["close_type"]
+    cv.close_message = cpd["close_message"]
     cv.save()
-    opi.close_pos_infos.append(cv)  # type: ignore
+    opi.close_pos_infos.append(cv)
     ts.carrying_volume = ts.carrying_volume - cv.volume
     if ts.carrying_volume == 0:
         ts.trade_status = 2
@@ -90,14 +100,14 @@ def save_close_volume(ts: TradeStatus, cpd: dict, cv: CloseVolume):
 
 
 def save_open_volume(ts: TradeStatus, opd: dict, ov):
-    '''主策略和摸底策略共用方法，用来保存'''
+    """主策略和摸底策略共用方法，用来保存开仓信息"""
     ov.symbol = ts.symbol
     ov.direction = ts.direction
-    ov.trade_price = opd['trade_price']
-    ov.volume = opd['volume']
-    ov.trade_time = opd['trade_time']
-    ov.order_id = opd['order_id']
-    ov.last_modified = opd['trade_time']
+    ov.trade_price = opd["trade_price"]
+    ov.volume = opd["volume"]
+    ov.trade_time = opd["trade_time"]
+    ov.order_id = opd["order_id"]
+    ov.last_modified = opd["trade_time"]
     ov.save()
     ts.trade_status = 1
     ts.carrying_volume = ov.volume
@@ -107,12 +117,13 @@ def save_open_volume(ts: TradeStatus, opd: dict, ov):
 
 
 def switch_symbol(
-        mj_status: MainJointSymbolStatus,
-        current_status: TradeStatus,
-        next_status: TradeStatus,
-        new_status: TradeStatus,
-        trade_status_list: [TradeStatus]):
-    '''重置期货合约交易状态信息, 用于下一个交易合约使用'''
+    mj_status: MainJointSymbolStatus,
+    current_status: TradeStatus,
+    next_status: TradeStatus,
+    new_status: TradeStatus,
+    trade_status_list: [TradeStatus],
+):
+    """重置期货合约交易状态信息, 用于下一个交易合约使用"""
     mj_status.save()
     current_status.delete()
     next_status.save()
@@ -122,9 +133,8 @@ def switch_symbol(
             ts.delete()
 
 
-def closeout(sts: TradeStatus, symbol: str, t_time: datetime
-             ) -> TradeStatus:
-    '''平仓'''
+def closeout(sts: TradeStatus, symbol: str, t_time: datetime) -> TradeStatus:
+    """平仓"""
     sts.closeout(t_time)
     sts.save()
     return sts

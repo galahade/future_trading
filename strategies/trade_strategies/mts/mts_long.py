@@ -10,24 +10,23 @@ from strategies.trade_strategies.trade_strategies import LongTradeStrategy
 class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
     def _try_take_profit(self) -> None:
         logger = self.logger
-        s = self.ts.symbol
+        price = self.current_price
+        s = self.symbol
         kline = self._get_last_kline_in_trade(self._d_klines)
-        sc = self.ts.sold_condition
+        sc = self.close_condition
         log_str = "{} {} <做多> 止赢{} 现价:{} 手数:{} 剩余仓位:{} 止赢起始价:{}"
         sp_log = "止盈条件{}-售出{}"
         trade_time = tq_tools.get_date_str(kline.datetime)
-        price = self._get_current_price()
         if self._get_profit_condition() in [1, 2, 3]:
             self._try_improve_stop_loss()
             if self._is_f5m_closeout():
-                sold_pos = self._get_carry_pos()
                 self.closeout(1, sp_log.format(sc.take_profit_cond, "100%"))
                 content = log_str.format(
                     trade_time,
                     s,
                     sc.take_profit_cond,
                     price,
-                    sold_pos,
+                    self.carrying_volume,
                     0,
                     sc.tp_started_point,
                 )
@@ -35,7 +34,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         elif self._get_profit_condition() in [4]:
             if sc.take_profit_stage == 1:
                 sc.take_profit_stage = 2
-                carry_pos = self._get_carry_pos()
+                carry_pos = self.carrying_volume
                 sold_pos = carry_pos // 2 if carry_pos > 1 else carry_pos
                 self.close_pos(
                     sold_pos, 1, sp_log.format(sc.take_profit_cond, "50%")
@@ -46,13 +45,13 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
                     sc.take_profit_cond,
                     price,
                     sold_pos,
-                    self._get_carry_pos(),
+                    self.carrying_volume,
                     sc.tp_started_point,
                 )
                 logger.info(content)
             elif sc.take_profit_stage == 2:
                 if price >= self._calc_price(
-                    self.ts.open_pos_info.trade_price, 3.0, True
+                    self.trade_status.open_pos_info.trade_price, 3.0, True
                 ):
                     self.closeout(
                         1, sp_log.format(sc.take_profit_cond, "剩余全部")
@@ -68,7 +67,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
 
     def _match_dk_condition(self) -> bool:
         logger = self.logger
-        kline = self._get_last_kline_in_trade(self._d_klines)
+        kline = self.last_daily_kline
         (
             e9,
             e22,
@@ -133,7 +132,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         if cond_number > 0:
             content = log_str.format(
                 trade_time,
-                self.ts.symbol,
+                self.symbol,
                 cond_number,
                 k_date_str_short,
                 e9,
@@ -147,10 +146,9 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             logger.info(content)
             self._set_open_condition(
-                kline, cond_number, self.ts.open_condition.daily_condition
-            )  # type: ignore
-            self.ts.open_condition.daily_condition.condition_id = cond_number  # type: ignore
-        return self._d_klines.loc[kline.name].l_condition  # type: ignore
+                kline, cond_number, self.open_condition.daily_condition
+            )
+        return self._d_klines.loc[kline.name].l_condition
 
     def _match_3h_condition(self) -> bool:
         """做多3小时线检测"""
@@ -216,7 +214,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         if cond_number > 0:
             content = log_str.format(
                 trade_time,
-                self.ts.symbol,
+                self.symbol,
                 cond_number,
                 k_date_str,
                 e9,
@@ -231,9 +229,9 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             logger.info(content)
             self._set_open_condition(
-                kline, cond_number, self.ts.open_condition.hourly_condition
-            )  # type: ignore
-        return self._3h_klines.loc[kline.name].l_condition  # type: ignore
+                kline, cond_number, self.open_condition.hourly_condition
+            )
+        return self._3h_klines.loc[kline.name].l_condition
 
     def _match_30m_condition(self) -> bool:
         """做多30分钟线检测"""
@@ -263,7 +261,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             content = log_str.format(
                 trade_time,
-                self.ts.symbol,
+                self.symbol,
                 k_date_str,
                 e9,
                 e22,
@@ -274,13 +272,13 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             logger.info(content)
             self._set_open_condition(
-                kline, 1, self.ts.open_condition.minute_30_condition
-            )  # type: ignore
+                kline, 1, self.open_condition.minute_30_condition
+            )
         else:
             self._set_klines_value(
                 self._30m_klines, kline.name, "l_condition", 0
             )
-        return self._30m_klines.loc[kline.name].l_condition  # type: ignore
+        return self._30m_klines.loc[kline.name].l_condition
 
     def _match_5m_condition(self) -> bool:
         """做多5分钟线检测"""
@@ -310,7 +308,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             content = log_str.format(
                 trade_time,
-                self.ts.symbol,
+                self.symbol,
                 k_date_str,
                 e9,
                 e22,
@@ -321,39 +319,37 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             )
             logger.info(content)
             self._set_open_condition(
-                kline, 1, self.ts.open_condition.minute_5_condition
-            )  # type: ignore
+                kline, 1, self.open_condition.minute_5_condition
+            )
             return True
         else:
             self._set_klines_value(
                 self._5m_klines, kline.name, "l_condition", 0
             )
-        return self._5m_klines.loc[kline.name, "l_condition"]  # type: ignore
+        return self._5m_klines.loc[kline.name, "l_condition"]
 
     def _has_match_stop_loss(self) -> bool:
-        price = self._get_current_price()
-        if self.is_trading() == 1:
-            sc = self.ts.sold_condition
-            if price <= sc.stop_loss_price:
+        if self.is_trading:
+            sc = self.close_condition
+            if self.current_price <= sc.stop_loss_price:
                 return True
         return False
 
-    def _set_sold_condition(self):
-        super()._set_sold_condition()
-        s_c = self.ts.sold_condition
-        d_c_id = self.ts.open_condition.daily_condition.condition_id
-        h_c_id = self.ts.open_condition.hourly_condition.condition_id
+    def _set_close_condition(self):
+        super()._set_close_condition()
+        d_c_id = self.open_condition.daily_condition.condition_id
+        h_c_id = self.open_condition.hourly_condition.condition_id
         if d_c_id in [1, 2]:
-            s_c.take_profit_cond = 1
+            self.close_condition.take_profit_cond = 1
         elif d_c_id == 5:
-            s_c.take_profit_cond = 2
+            self.close_condition.take_profit_cond = 2
         elif d_c_id == 3 and h_c_id == 6:
-            s_c.take_profit_cond = 3
+            self.close_condition.take_profit_cond = 3
         elif d_c_id in [3, 4] and h_c_id == 3:
-            s_c.take_profit_cond = 4
+            self.close_condition.take_profit_cond = 4
 
-    def _set_sold_prices(self, trade_price: float):
-        s_c = self.ts.sold_condition
+    def _set_close_prices(self, trade_price: float):
+        s_c = self.close_condition
         s_c.stop_loss_price = self._calc_price(
             trade_price,
             self.config.f_info.long_config.stop_loss_scale,
@@ -372,7 +368,7 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
                 True,
             )
         self.logger.info(
-            f"{self._get_trade_date_str()} {self.symbol} "
+            f"{self.trade_date_str} {self.symbol} "
             f"<做多>开仓价:{trade_price}"
             f"止损设为:{s_c.stop_loss_price}"
             f"止盈起始价为:{s_c.tp_started_point}"
@@ -380,29 +376,30 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
 
     def _try_improve_stop_loss(self) -> None:
         logger = self.logger
-        price = self._get_current_price()
-        trade_price = self.ts.open_pos_info.trade_price
+        trade_price = self.trade_status.open_pos_info.trade_price
         trade_config = self.config.f_info.long_config
-        sc = self.ts.sold_condition
-        trade_time = tq_tools.get_date_str(self._get_trade_date())
+        sc = self.close_condition
         log_str = "{} {} <做多> 现价{} 达到1:{} 盈亏比,将止损价提高至{}"
         promote_price = self._calc_price(
             trade_price, trade_config.promote_scale_1, True
         )
         if sc.has_increase_slp:
             return
-        if sc.take_profit_stage in [1, 2, 3] and price >= promote_price:
+        if (
+            sc.take_profit_stage in [1, 2, 3]
+            and self.current_price >= promote_price
+        ):
             sc.stop_loss_price = self._calc_price(
                 trade_price, trade_config.promote_target_1, True
             )
             sc.sl_reason = "跟踪止盈"
             sc.has_increase_slp = True
-            service.update_trade_status(self.ts, self._get_trade_date())
+            service.update_trade_status(self.trade_status, self.trade_date)
             logger.debug(
                 log_str.format(
-                    trade_time,
+                    self.trade_date_str,
                     self.symbol,
-                    price,
+                    self.current_price,
                     trade_config.promote_scale_1,
                     sc.stop_loss_price,
                 )
@@ -416,10 +413,10 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
             "日线EMA9:{} 日线EMA22:{} EMA60:{}"
         )
         e9, e22, e60, _, _, _, trade_time, _, _ = self._get_indicators(kline)
-        price = self._get_current_price()
+        price = self.current_price
         trade_time = tq_tools.get_date_str(trade_time)
-        sc = self.ts.sold_condition
-        if self._is_last_5m():
+        sc = self.close_condition
+        if self.is_last_5m:
             if sc.take_profit_cond == 1 and price < e60 and e9 < e22:
                 logger.debug(
                     log_str.format(
@@ -446,21 +443,23 @@ class MainLongTradeStrategy(MainTradeStrategy, LongTradeStrategy):
         4:止盈条件4
         """
         logger = self.logger
-        if self.is_trading():
+        if self.is_trading:
             log_str = "{} {} <做多> 现价:{} 达到止盈价{} 开始监控 " "止损价提高到:{}"
-            price = self._get_current_price()
-            sc = self.ts.sold_condition
+            price = self.current_price
+            sc = self.close_condition
             if sc.has_enter_tp:
                 return sc.take_profit_cond
             if price >= sc.tp_started_point:
                 sc.has_enter_tp = True
                 if sc.take_profit_cond == 4:
-                    sc.stop_loss_price = self.ts.open_pos_info.trade_price
+                    sc.stop_loss_price = (
+                        self.trade_status.open_pos_info.trade_price
+                    )
                     sc.take_profit_stage = 1
-                service.update_trade_status(self.ts, self._get_trade_date())
+                service.update_trade_status(self.trade_status, self.trade_date)
                 logger.info(
                     log_str.format(
-                        tq_tools.get_date_str(self._get_trade_date()),
+                        self.trade_date_str,
                         self.symbol,
                         price,
                         sc.tp_started_point,

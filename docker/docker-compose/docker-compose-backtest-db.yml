@@ -5,13 +5,13 @@ services:
     ports:
       - 26016:27017
     volumes:
-      - bottom-trade-mongo-data:/data/db
+      - ft-backtest-mongo-data:/data/db
     networks:
       - database
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 volumes:
-  bottom-trade-mongo-data:
+  ft-backtest-mongo-data:
 networks:
   database:

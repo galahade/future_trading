@@ -1,13 +1,11 @@
 import logging
 import re
 from datetime import date, datetime, timedelta, timezone
-from typing import List
 
 import requests
 import yaml
 from pypushdeer import PushDeer
 
-from dao.odm.trade_config import TradeConfigInfo
 from utils import global_var as gvar
 
 pushdeer = PushDeer(pushkey=gvar.PUSH_KEY)
@@ -22,20 +20,22 @@ def sendPushDeerMsg(title: str, content: str):
         logger.exception(e)
 
 
-def sendSystemStartupMsg(s_time: datetime, trade_config: TradeConfigInfo):
+def sendSystemStartupMsg(
+    s_time: datetime, direction: int, strategy_ids: list[int]
+):
     title = f'### {s_time.strftime("%Y-%m-%d")} {gvar.ENV_NAME}环境启动'
     strategies = ""
-    for i in trade_config.strategy_ids:
+    for i in strategy_ids:
         if i == 1:
             strategies += "主策略 "
         elif i == 2:
             strategies += "摸底策略"
     direction_str = ""
-    if trade_config.direction == 1:
+    if direction == 1:
         direction_str = "做多"
-    elif trade_config.direction == 2:
+    elif direction == 2:
         direction_str = "多空"
-    elif trade_config.direction == 0:
+    elif direction == 0:
         direction_str = "做空"
     content = f'使用策略: **{strategies}**, 交易方向: **{direction_str}**, 启动时间: **{s_time.strftime("%Y-%m-%d %H:%M:%S")}**'
     sendPushDeerMsg(title, content)
@@ -61,7 +61,7 @@ def get_custom_symbol(zl_symbol: str, l_or_s: bool, s_name: str) -> str:
     return f'{symbol_list[1]}_{symbol_list[2]}_{s_name}_{"long" if l_or_s else "short"}'
 
 
-def examine_symbol(_symbol) -> List[str]:
+def examine_symbol(_symbol) -> list[str]:
     pattern_dict_normal = {
         "CFFEX": re.compile(r"^(CFFEX).([A-Z]{1,2})(\d{4})$"),
         "CZCE": re.compile(r"^(CZCE).([A-Z]{2})(\d{3})$"),
@@ -162,14 +162,38 @@ def get_trade_date(trade_time: datetime) -> date:
         return (trade_time + timedelta(days=1)).date()
 
 
-def is_after_trade() -> bool:
-    """根据当前时间判断目前所处时段是交易结束时段还是交易开始前时段
-    交易结束时段: 15:00 - 19:20
-    交易开始前时段: 19:20 - 21:00"""
+def run_nothing() -> bool:
+    """根据当前时间判断目前所处时段是否处于不需要执行盘前操作时段。
+    目前不需要操作的阶段为: 15:00 - 19:15
+    盘前操作时段为: 每日19:15以后"""
     now = datetime.now(tz_utc_8)
     hour = now.hour
     minutes = now.minute
-    if (hour >= 15 and hour < 19) or (hour == 19 and minutes < 20):
+    if _is_weekend(now):
+        return True
+    else:
+        if (hour >= 15 and hour < 19) or (hour == 19 and minutes < 15):
+            return True
+        return False
+
+
+def dont_trading() -> bool:
+    """根据当前时间判断目前所处时段是否需要执行交易
+    不执行交易的时间段为: 15:00 - 20:45
+    开始监控交易时间段为: 每日20:45以后"""
+    now = datetime.now(tz_utc_8)
+    hour = now.hour
+    minutes = now.minute
+    if _is_weekend(now):
+        return True
+    else:
+        if (hour >= 15 and hour < 20) or (hour == 20 and minutes < 45):
+            return True
+        return False
+
+
+def _is_weekend(date: datetime) -> bool:
+    if date.isoweekday() in (6, 7):
         return True
     return False
 

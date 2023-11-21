@@ -1,9 +1,11 @@
-import os
 from headquarters.headquarters import Commander
 from utils import common
 import sys
 import logging
 from utils import global_var as gvar
+import warnings
+# 忽略所有警告信息
+warnings.filterwarnings("ignore")
 
 now = common.now
 is_back_test = False
@@ -19,10 +21,9 @@ logger = logging.getLogger(__name__)
 
 def main():
     try:
-        systemConfig = common.get_argumets()
         log_config_file = f'log_config_{gvar.ENV_NAME}'
         common.setup_log_config(log_level, log_config_file)
-        commander = Commander(systemConfig.is_back_test)
+        commander = Commander()
         commander.start_work()
     except Exception as e:
         logger.exception(e)

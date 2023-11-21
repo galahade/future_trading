@@ -36,7 +36,7 @@ class MJStrategy(Strategy):
             self.mjs_status.next_symbol
         )
 
-    def swith_symbol(self):
+    def switch_symbol(self):
         """盘前换月
 
         换月流程：
@@ -51,8 +51,8 @@ class MJStrategy(Strategy):
         )
         self.mjs_status.current_symbol = current_symbol
         self.mjs_status.next_symbol = next_symbol
-        current_status = self.current_trade_strategy.ts
-        next_status = self.next_trade_strategy.ts
+        current_status = self.current_trade_strategy._ts
+        next_status = self.next_trade_strategy._ts
         self.logger.info(
             f"主连合约{self.mjs_status.main_joint_symbol}换月："
             f"上一主力合约：{current_status.symbol} "
@@ -87,19 +87,13 @@ class MJStrategy(Strategy):
 
     def execute_trade(self):
         """当K线发生变化时，先为K线填充数据，然后执行交易策略
-        1: 交易日结束 2: 日线, 3: 3小时线, 4: 30分钟线, 5: 5分钟线
+        1: 3小时线, 2: 30分钟线, 3: 5分钟线
         """
-        # 注释的4行代码是回测时和当天交易结束时需要执行的操作。目前效果并不好，故
-        # 计划采用其他方式。
-        # if self._is_changing(1):
-        #     self.execute_after_trade()
-        # if self._is_changing(2):
-        #     self.fill_indicators_by_type(2)
-        if self._is_changing(3):
+        if self._is_changing(1):
             self.fill_indicators_by_type(3)
-        if self._is_changing(4):
+        if self._is_changing(2):
             self.fill_indicators_by_type(4)
-        if self._is_changing(5):
+        if self._is_changing(3):
             self.fill_indicators_by_type(5)
         if self.config.api.is_changing(self.config.quote, "datetime"):
             self.current_trade_strategy.execute_trade()

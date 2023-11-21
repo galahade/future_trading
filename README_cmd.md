@@ -7,7 +7,7 @@ pipenv requirements > requirements.txt
 
 ## 构建镜像文件
 
-### 构建开发/回测镜像
+### 构建开发镜像
 
 开发过程中，使用以下命令构建运行环境，对代码进行测试
 
@@ -84,16 +84,12 @@ docker run -it -v future-trading-log-data:/log --rm bash:4.4
 
 ```bash
 # 开发环境
-docker stack deploy -c docker/dock-compose/docker-compose.yml ft-dev
+docker stack deploy -c docker-compose.yml ft-dev
 docker stack rm ft-dev
 
 # 调试环境
 docker stack deploy -c docker-compose-debug.yml ft-debug
 docker stack rm ft-debug
-
-# 回测环境
-docker stack deploy -c docker-compose-backtest.yml bottom-trade-backtest
-docker stack rm bottom-trade-backtest
 
 # 测试环境
 docker stack deploy -c docker-compose-test.yml ft-test
@@ -110,20 +106,48 @@ docker stack rm bottom-trade-young
 
 ### 回测环境的使用步骤
 
+1. 构建回测镜像
+
+    ```bash
+    # 使用缓存构建image
+    docker build --tag galahade/future-trading-backtest .
+    # 不使用缓存，从头构建image
+    docker build --no-cache --tag galahade/future-trading-backtest .
+    # 对镜像打标签
+    docker tag galahade/future-trading-backtest  galahade/future-trading-backtest:v0.1
+    ```
+
+1. 创建回测日志卷
+
+    ```bash
+    docker volume create ft-backtest-log-data
+    # 查看 volume 内容的命令
+    docker run -it -v future-trading-log-data:/log --rm bash:4.4
+    ```
+
 1. 首先使用`docker-compose-backtest-db.yml`部署回测数据库主机
 
     ```bash
-    docker stack deploy -c docker-compose-backtest-db.yml bottom-backtest-db
+    docker stack deploy -c docker/docker-compose/docker-compose-backtest-db.yml ft-backtest-db
     ```
 
-2. 修改`conf/trade_config_backtest.yaml`中需要进行回测的品种的，使用`docker-compose-backtest.yml`加不同名称为每个品种部署回测环境。
+1. 修改`conf/trade_config_backtest_{type}.yaml`中需要进行回测的品种的，使用`docker-compose-backtest.yml`加不同名称为每个品种部署回测环境。
 
     ```bash
-    docker stack deploy -c docker-compose-backtest.yml bottom-backtest-1
+    docker stack deploy -c docker-compose-backtest.yml ft-backtest-{type}
+    # 比如: 期货配置文件使用conf/trade_config_backtest_black.yaml, 则使用以下命令
+    docker stack deploy -c docker-compose-backtest.yml ft-backtest-black
+    ```
+
+1. 删除部署的回测环境
+    ```bash
+    docker stack rm ft-backtest-{type}
+    # 如删除黑色系回测环境
+    docker stack rm ft-backtest-black
     ```
 
 3. 在日志中找到并记录每个回测环境使用的数据库名称，使用以下命令将结果导出到excel文件。
 
     ```bash
-    python generate_excel.py -p 26016 -n DB_NAME 
+    python generate_excel.py -p 26016 -n future_trade 
     ```

@@ -5,25 +5,31 @@ from pandas import Series
 from tqsdk import tafunc
 from tqsdk.ta import EMA, MACD
 
+import utils.common_tools as c_tools
+import utils.email_tools as email_tools
 from utils import global_var as gvar
-from utils.common_tools import sendPushDeerMsg
 
 
-def sendTradePosMsg(
-    custom_symbol: str,
-    symbol: str,
-    direction: bool,
-    pos: int,
-    price: float,
-    t_time: str,
-):
-    if direction:
-        dir_str = "买入"
+def sendTradePosMsg(tradeMsg: dict):
+    if tradeMsg["direction"]:
+        dir_str = "做多"
     else:
-        dir_str = "卖出"
-    title = f"## {gvar.ENV_NAME}环境 {custom_symbol} {dir_str}"
-    content = f"{t_time} **{symbol}** {dir_str} **{pos}** 手，价格 **¥{price}**"
-    sendPushDeerMsg(title, content)
+        dir_str = "做空"
+    title = f"## {gvar.ENV_NAME} 环境 {tradeMsg['custom_symbol']} {dir_str} {tradeMsg['o_or_c']}"
+    content = f"{tradeMsg['t_time']} **{tradeMsg['symbol']}** {tradeMsg['message']} **{tradeMsg['pos']}** 手，成交价 **¥{tradeMsg['price']}**"
+    email_context = {
+        "today": datetime.now().strftime("%Y-%m-%d"),
+        "env_name": gvar.ENV_NAME,
+        "o_or_c": tradeMsg["o_or_c"],
+        "symbol": tradeMsg["symbol"],
+        "dir_str": dir_str,
+        "t_time": tradeMsg["t_time"],
+        "message": tradeMsg["message"],
+        "pos": tradeMsg["pos"],
+        "price": tradeMsg["price"],
+    }
+    c_tools.sendPushDeerMsg(title, content)
+    email_tools.send_trade_message(email_context)
 
 
 def fill_macd(klines):
@@ -183,7 +189,7 @@ def has_set_k_attr(kline: Series, attr_value: str) -> bool:
     """判断K线是否设置了attr_value属性值，如果设置了，返回True，否则返回False"""
     return kline.get(attr_value) is not None and not (
         np.isnan(kline.get(attr_value))
-    )  # type: ignore
+    )
 
 
 def diff_two_value(first: float, second: float) -> float:

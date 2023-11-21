@@ -22,11 +22,11 @@ class CommonConfig:
 class TradeConfig:
     def __init__(self, **configs):
         self.__dict__.update(configs)
-        self.start_date = self.backtest_days["start_date"]  # type: ignore
-        self.end_date = self.backtest_days["end_date"]  # type: ignore
+        self.start_date = self.backtest_days["start_date"]
+        self.end_date = self.backtest_days["end_date"]
 
 
-def get_system_config(is_backtest=False) -> SystemConfig:
+def get_system_config() -> SystemConfig:
     """从配置文件中读取系统配置信息
 
     系统配置信息包括: MongoDB数据库配置信息、期货交易账户配置信息、期货交易策略配置信息
@@ -37,11 +37,7 @@ def get_system_config(is_backtest=False) -> SystemConfig:
     Returns:
         SystemConfig: 返回系统配置信息
     """
-    if is_backtest:
-        path = gvar.SYSTEM_CONFIG_BT_PATH
-    else:
-        path = gvar.SYSTEM_CONFIG_PATH
-    return SystemConfig(**get_yaml_config(path))
+    return SystemConfig(**get_yaml_config(gvar.SYSTEM_CONFIG_PATH))
 
 
 class FutureConfig:
@@ -50,10 +46,8 @@ class FutureConfig:
     def __init__(self, open_pos_scale, **config):
         self.__dict__.update(config)
         self.open_pos_scale = open_pos_scale
-        self.long_trade_config = LongTradeConfig(**self.long)  # type: ignore
-        self.short_trade_config = ShortTradeConfig(
-            **self.short
-        )  # type: ignore
+        self.long_trade_config = LongTradeConfig(**self.long)
+        self.short_trade_config = ShortTradeConfig(**self.short)
 
 
 class LongTradeConfig:
@@ -70,14 +64,9 @@ class ShortTradeConfig:
         self.__dict__.update(config)
 
 
-def get_future_configs(is_backtest=False) -> List[FutureConfig]:
+def get_future_configs() -> List[FutureConfig]:
     """从系统配置文件中读取期货交易品种配置信息"""
-    # is_backtest = True
-    if is_backtest:
-        path = gvar.FUTURE_CONFIG_BT_PATH
-    else:
-        path = gvar.FUTURE_CONFIG_PATH
-    configs = get_yaml_config(path)
+    configs = get_yaml_config(gvar.FUTURE_CONFIG_PATH)
     future_configs = configs["futures"]
     open_pos_scale = configs["open_pos_scale"]
     # use a array to store all the future configs

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 
 from mongoengine.queryset.visitor import Q
 from tqsdk.objs import Order
@@ -11,10 +11,14 @@ import dao.trade.tq_dao as tqdao
 import dao.trade.trade_dao as dao
 import utils.common_tools as ctools
 from dao.odm.future_trade import (
+    BottomOpenCondition,
     BottomOpenVolume,
     BottomOpenVolumeTip,
     BottomTradeStatus,
+    CloseCondition,
+    MainDailyConditionTip,
     MainJointSymbolStatus,
+    MainOpenCondition,
     MainOpenVolume,
     MainTradeStatus,
     SwitchSymbolTradeRecord,
@@ -93,10 +97,17 @@ def get_bottom_ov(symbol: str, direction: int) -> BottomOpenVolume:
     return bdao.getOpenVolume(symbol, direction)
 
 
-def open_main_pos(status: TradeStatus, order: Order):
+def open_main_pos(
+    status: TradeStatus,
+    o_condition: MainOpenCondition,
+    c_condition: CloseCondition,
+    order: Order,
+):
     """将开仓信息保存至数据库，并更新合约交易状态信息"""
     o_dict = _get_odict_from_order(order)
-    return mdao.openPosAndUpdateStatus(status, o_dict)  # type: ignore
+    return mdao.openPosAndUpdateStatus(
+        status, o_condition, c_condition, o_dict
+    )
 
 
 def open_bottom_pos(
@@ -104,7 +115,7 @@ def open_bottom_pos(
 ):
     """将开仓信息保存至数据库，并更新合约交易状态信息"""
     o_dict = _get_odict_from_order(order)
-    return bdao.openPosAndUpdateStatus(status, o_dict, bovt)  # type: ignore
+    return bdao.openPosAndUpdateStatus(status, o_dict, bovt)
 
 
 def close_ops(status: TradeStatus, c_type: int, c_message: str, order: Order):
@@ -211,22 +222,38 @@ def _get_odict_from_order(order: Order) -> dict:
     }
 
 
-def store_b_open_volume_tip(
-    status: BottomTradeStatus, pos: int
-) -> BottomOpenVolumeTip:
-    """将开仓信息保存至数据库，并更新合约交易状态信息"""
-    return bdao.createOpenVolumeTip(status, pos)
-
-
 def update_trade_status(status: TradeStatus, update_time: datetime):
     """更新合约交易状态信息"""
     status.last_modified = update_time
     dao.updateTradeStatus(status)
 
 
-def get_last_bottom_tips() -> Optional[List[BottomOpenVolumeTip]]:
+# 以下与盘前提示相关
+def store_daily_condition_tip(
+    status: MainTradeStatus, open_condition: MainOpenCondition
+) -> MainDailyConditionTip:
+    """将开仓信息保存至数据库，并更新合约交易状态信息"""
+    return mdao.createDailyConditionTip(status, open_condition)
+
+
+def get_last_daily_condition_tips() -> Optional[list[MainDailyConditionTip]]:
+    """获取最近一日的主策略日线提示信息"""
+    print(MainDailyConditionTip)
+    if MainDailyConditionTip is not None:
+        return MainDailyConditionTip.get_last_tips()
+    return None
+
+
+def store_b_open_volume_tip(
+    status: BottomTradeStatus, open_condition: BottomOpenCondition, pos: int
+) -> BottomOpenVolumeTip:
+    """将开仓信息保存至数据库，并更新合约交易状态信息"""
+    return bdao.createOpenVolumeTip(status, open_condition, pos)
+
+
+def get_last_bottom_tips() -> Optional[list[BottomOpenVolumeTip]]:
     """获取最近的开仓提示信息"""
-    return BottomOpenVolumeTip.get_last_tips()  # type: ignore
+    return BottomOpenVolumeTip.get_last_tips()
 
 
 def get_last_bottom_tip_by_symbol(
@@ -238,7 +265,9 @@ def get_last_bottom_tip_by_symbol(
     except Exception:
         return None
     if queryset is not None:
-        return queryset.filter(Q(symbol=symbol) & Q(direction=direction)).first()  # type: ignore
+        return queryset.filter(
+            Q(symbol=symbol) & Q(direction=direction)
+        ).first()
     return None
 
 
@@ -266,7 +295,7 @@ def get_last7d_count(bovt: BottomOpenVolumeTip) -> int:
         Q(symbol=bovt.symbol)
         & Q(direction=bovt.direction)
         & Q(dkline_time__gte=bovt.dkline_time - timedelta(days=7))
-    ).count()  # type: ignore
+    ).count()
 
 
 def store_tq_order(order: Order) -> TqOrder:

@@ -4,7 +4,6 @@ from typing import List, Optional
 
 from tqsdk import TqApi
 
-import strategies.tools as tools
 import utils.tqsdk_tools as tq_tools
 from dao.odm.future_config import FutureConfigInfo
 from strategies.cyclical_strategies import CyclicalStrategy
@@ -19,7 +18,6 @@ from strategies.main_joint_symbol_strategies.smjs_strategies import (
     MJStrategy,
 )
 from utils.common import LoggerGetter
-from utils.common_tools import get_china_date_from_str
 
 
 class StrategyTrader:
@@ -86,7 +84,6 @@ class StrategyTrader:
 
     def execute_before_trade(self):
         self._switch_symbol()
-
         if self.long_mjs is not None:
             self.long_mjs.execute_before_trade()
         if self.short_mjs is not None:
@@ -173,11 +170,6 @@ class Trader:
             )
         return s_traders
 
-    def _is_daily_trade_finished(self) -> bool:
-        return tools.is_after_execute_time(
-            self._config.api, self._config.f_info.symbol
-        )
-
     def _is_trading_time(self) -> bool:
         return tq_tools.is_trading_period(self._config.api, self._config.quote)
 
@@ -189,8 +181,9 @@ class Trader:
 
     def execute_before_trade(self):
         """交易前的准备工作
-        如: 换月
+        如: 换月, 摸底策略提示等
         """
+        self.logger.debug("Trade execute before trade is running")
         for s_trader in self.strategy_traders:
             s_trader.execute_before_trade()
 
@@ -203,29 +196,39 @@ class Trader:
 
 
 class TestTrader(Trader):
-    def _is_daily_trade_finished(self) -> bool:
-        return self._config.api.is_changing(
-            self._mj_d_klines.iloc[-1], "datetime"
-        )
+    def _init_s_traders(self, strategy_ids: List[int]) -> List[StrategyTrader]:
+        """初始化策略交易人, 每种交易策略对应一个策略交易人,
+        回测不执行摸底策略，故不初始化摸底策略交易人"""
+        s_traders = []
+        for sid in filter(lambda id: id != 2, strategy_ids):
+            s_traders.append(
+                StrategyTrader.get_strader_by_sid(self._config, sid)
+            )
+        return s_traders
 
-    def execute_trade(self):
-        """根据该品种配置和当前交易时间，执行交易操作"""
-        logger = self.logger
-        log_str = "{} {} <交易人:{}> 完成当日交易，准备产生新的交易人"
-        quote_time = get_china_date_from_str(self._config.quote.datetime)
-        if self._is_daily_trade_finished():
-            logger.info(
-                log_str.format(
-                    quote_time, self._config.f_info.symbol, id(self)
-                )
-            )
-            self.is_finished = True
-        elif (
-            self.is_active
-            and not self.is_finished
-            and tools.is_trading_time(
-                self._config.api, self._config.get_mj_symbol()
-            )
-        ):
-            for s_trader in self.strategy_traders:
-                s_trader.execute_trade()
+    # def _is_daily_trade_finished(self) -> bool:
+    #     return self._config.api.is_changing(
+    #         self._mj_d_klines.iloc[-1], "datetime"
+    #     )
+
+    # def execute_trade(self):
+    #     """根据该品种配置和当前交易时间，执行交易操作"""
+    #     logger = self.logger
+    #     log_str = "{} {} <交易人:{}> 完成当日交易，准备产生新的交易人"
+    #     quote_time = get_china_date_from_str(self._config.quote.datetime)
+    #     if self._is_daily_trade_finished():
+    #         logger.info(
+    #             log_str.format(
+    #                 quote_time, self._config.f_info.symbol, id(self)
+    #             )
+    #         )
+    #         self.is_finished = True
+    #     elif (
+    #         self.is_active
+    #         and not self.is_finished
+    #         and tools.is_trading_time(
+    #             self._config.api, self._config.get_mj_symbol()
+    #         )
+    #     ):
+    #         for s_trader in self.strategy_traders:
+    #             s_trader.execute_trade()

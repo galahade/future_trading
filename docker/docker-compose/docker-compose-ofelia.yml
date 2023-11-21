@@ -2,45 +2,35 @@ version: "3.8"
 services:
   app:
     image: galahade/future-trading-dev:latest
-    deploy:
-      restart_policy:
-        delay: 1800s
     working_dir: /app
     volumes:
-      # - ".:/app"
+      - ".:/app"
       - future-trading-log-data:/log
-    depends_on:
-      - mongo_db
-    networks:
-      - database
     environment:
       SYSTEM_CONFIG_PATH: /run/secrets/system_config_file
       FUTURE_CONFIG_PATH: /run/secrets/future_config_file
       ENV_NAME: dev
-      # 天勤云账号的子账号数，可以使不同运行环境相互独立测试
-      TQKQ_NUMBER: 1
     secrets:
       - system_config_file
       - future_config_file
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.ft-corn.schedule: "0 30 19 * * *"
+      ofelia.job-exec.ft-corn.command: "/docker-entrypoint.sh"
 
-  mongo_db:
-    image: mongo
-    networks:
-      - database
-    ports:
-      - 26017:27017
+  ofelia:
+    image: mcuadros/ofelia:latest
+    depends_on:
+      - app
+    command: daemon --docker
     volumes:
-      - future-trading-mongo-data:/data/db
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      - TZ=Asia/Shanghai
+
 volumes:
-  future-trading-mongo-data:
   future-trading-log-data:
-      external: true
-networks:
-  database:
-    attachable: true
+    external: true
 secrets:
   system_config_file:
     file: secrets/system_config_dev.yaml

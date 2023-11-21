@@ -8,7 +8,11 @@ import dao.trade.trade_service as service
 import strategies.tools as tools
 import utils.common_tools as c_tools
 import utils.tqsdk_tools as tq_tools
-from dao.odm.future_trade import BottomIndicatorValues, BottomTradeStatus
+from dao.odm.future_trade import (
+    BottomIndicatorValues,
+    BottomOpenCondition,
+    BottomTradeStatus,
+)
 from strategies.entity import StrategyConfig
 from strategies.trade_strategies.trade_strategies import TradeStrategy
 from utils.common_tools import LoggerGetter
@@ -20,7 +24,7 @@ class BottomTradeStrategy(TradeStrategy):
     def __init__(self, config: StrategyConfig, symbol: str):
         super().__init__(config, symbol)
         self.tip = service.get_last_bottom_tip_by_symbol(
-            self.ts.symbol, self._get_direction()
+            self.symbol, self.direction
         )
         self._macd_matched = False
 
@@ -42,10 +46,10 @@ class BottomTradeStrategy(TradeStrategy):
 
         当满足提示条件时，返回 True
         """
-        d_kline = self._get_last_dkline()
+        d_kline = self.last_daily_kline
         tip = service.get_lbt_by_symbol_date(
-            self.ts.symbol,
-            self._get_direction(),
+            self.symbol,
+            self.direction,
             tafunc.time_to_datetime(d_kline.datetime),
         )
         logger = self.logger
@@ -64,7 +68,7 @@ class BottomTradeStrategy(TradeStrategy):
         如有开仓则不作开仓操作。
         """
         logger = self.logger
-        if not self.is_trading():
+        if not self.is_trading:
             if self._need_trade():
                 logger.info("<摸底策略>符合开仓条件, 准备开仓".ljust(100, "-"))
                 return True
@@ -80,7 +84,7 @@ class BottomTradeStrategy(TradeStrategy):
     def _is_within_distance(self, last_matched_kline, is_macd_matched) -> bool:
         """30分钟线需要判断与最近符合条件的30分钟线的距离是否在5根以内"""
         logger = self.logger
-        trade_date_str = self._get_trade_date_str()
+        trade_date_str = self.trade_date_str
         log_str = (
             "{} {} 前一交易日最后30分钟线时间:{}, 满足条件的30分"
             "钟线时间{}, 满足条件前一根30分钟线ema5:{}, ema60:{}, close:{}."
@@ -98,7 +102,7 @@ class BottomTradeStrategy(TradeStrategy):
                 wanted_kline = self._30m_klines.iloc[i + 1]
                 content = log_str.format(
                     trade_date_str,
-                    self.ts.symbol,
+                    self.symbol,
                     tq_tools.get_date_str(last_matched_kline.datetime),
                     tq_tools.get_date_str(wanted_kline.datetime),
                     e5,
@@ -138,15 +142,8 @@ class BottomTradeStrategy(TradeStrategy):
         """摸底策略暂时只用作提示，不涉及止损"""
         pass
 
-    def _get_last_dkline(self):
-        """当该品种处于交易时段，要获取前一根日k线。
-        当处于交易结束时段，则获取最后一根日K线"""
-        if tq_tools.is_trading_period(self.api, self.quote):
-            return self._d_klines.iloc[-2]
-        return self._d_klines.iloc[-1]
-
     def _get_last_dk_date(self) -> datetime:
-        d_kline = self._get_last_dkline()
+        d_kline = self.last_daily_kline
         dk_time = c_tools.get_china_date_from_dt(
             tafunc.time_to_datetime(d_kline.datetime)
         )
@@ -166,14 +163,6 @@ class BottomTradeStrategy(TradeStrategy):
         l_timestamp = tafunc.time_to_ns_timestamp(lastday_lasth3k_time)
         return m30_klines[m30_klines.datetime <= l_timestamp].iloc[-1]
 
-    def execute_before_trade(self):
-        """摸底策略每天交易前执行一次该方法，用来检查并记录当天需要开仓的品种
-
-        摸底策略交易中不再判断其他条件，以该方法执行结果作为开仓依据。
-        无论是否已开仓，只要符合条件即生成提示记录
-        """
-        self._generate_tips()
-
     def execute_after_trade(self):
         """摸底策略收盘后执行一次该方法，
         目前天勤返回的数据不支持收盘时进行摸底判断，因为该时段收盘价不是最终收盘价
@@ -182,21 +171,23 @@ class BottomTradeStrategy(TradeStrategy):
     def _generate_tips(self):
         if self._can_get_tips():
             log_str = "{} {} {} 符合开仓条件, 开盘后注意关注开仓 " "前一日收盘价:{}, 预计开仓:{} 手"
-            dkline = self._get_last_dkline()
+            dkline = self.last_daily_kline
             pos = self._calc_open_pos(dkline.close)
             content = log_str.format(
-                self._get_trade_date(),
-                self.ts.symbol,
-                self.ts.custom_symbol,
+                self.trade_date,
+                self.symbol,
+                self.trade_status.custom_symbol,
                 dkline.close,
                 pos,
             )
             self.logger.info(content)
-            service.store_b_open_volume_tip(self.ts, pos)
+            service.store_b_open_volume_tip(
+                self.trade_status, self.open_condition, pos
+            )
 
     def _store_open_pos_info(self, order: Order):
         if self.tip is not None:
-            service.open_bottom_pos(self.ts, order, self.tip)
+            service.open_bottom_pos(self.trade_status, order, self.tip)
 
     def _get_indicators(self, kline) -> tuple:
         ema5 = kline.ema5
@@ -204,7 +195,6 @@ class BottomTradeStrategy(TradeStrategy):
         ema60 = kline.ema60
         macd = kline["MACD.close"]
         close = kline.close
-        trade_time = self._get_trade_date()
         kline_time_str_short = tq_tools.get_date_str_short(kline.datetime)
         kline_time_str = tq_tools.get_date_str(kline.datetime)
         return (
@@ -213,38 +203,60 @@ class BottomTradeStrategy(TradeStrategy):
             ema60,
             macd,
             close,
-            trade_time,
+            self.trade_date,
             kline_time_str_short,
             kline_time_str,
         )
 
-    def _get_trade_status(self, symbol: str) -> BottomTradeStatus:
+    def _init_trade_status(self, symbol: str) -> BottomTradeStatus:
         """获取交易状态"""
         return service.get_bottom_trade_status(
             self.config.custom_symbol,
             symbol,
-            self._get_direction(),
+            self.direction,
             self.config.quote.datetime,
         )
 
     def _set_open_condition(self, kline, biv: BottomIndicatorValues):
         """设置开仓条件"""
-        e5, e20, e60, macd, close, _, _, _ = self._get_indicators(kline)
-        if biv is None:
-            raise ValueError(f"{kline}, 没有开仓条件")
-        biv.ema5 = e5
-        biv.ema20 = e20
-        biv.ema60 = e60
-        biv.macd = macd
-        biv.close = close
+        (
+            biv.ema5,
+            biv.ema20,
+            biv.ema60,
+            biv.macd,
+            biv.close,
+            _,
+            _,
+            _,
+        ) = self._get_indicators(kline)
         biv.kline_time = tq_tools.get_datetime_from_ns(kline.datetime)
 
-    def _set_sold_condition(self):
+    def _set_close_condition(self):
+        """目前摸底策略未实现平仓策略，留作日后补充"""
         pass
 
     def _try_take_profit(self):
         """摸底策略暂时只用作提示，不提供止盈策略"""
         pass
+
+    def _get_strategy_name(self) -> int:
+        return "摸底策略"
+
+    @property
+    def open_condition(self) -> BottomOpenCondition:
+        if self.is_trading:
+            return self.trade_status.open_pos_info.tip.open_condition
+        if self._open_condition is None:
+            self._open_condition = BottomOpenCondition(
+                daily_condition=BottomIndicatorValues(),
+                hourly_condition=BottomIndicatorValues(),
+                minute_30_condition=BottomIndicatorValues(),
+            )
+        return self._open_condition
+
+    @property
+    def trade_status(self) -> BottomTradeStatus:
+        return self._ts
 
     @abstractmethod
     def _match_dk_condition(self) -> bool:
