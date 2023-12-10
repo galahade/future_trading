@@ -61,6 +61,6 @@ def send_trade_message(context: dict):
         "trade_pos_message.html"
     )
     _send_email(
-        f"开仓提示-{context['today']}-{context['env_name']}",
+        f"{context['o_or_c']}提示-{context['today']}-{context['env_name']}",
         template.render(context),
     )

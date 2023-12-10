@@ -162,7 +162,7 @@ def get_trade_date(trade_time: datetime) -> date:
         return (trade_time + timedelta(days=1)).date()
 
 
-def run_nothing() -> bool:
+def after_trade_time() -> bool:
     """根据当前时间判断目前所处时段是否处于不需要执行盘前操作时段。
     目前不需要操作的阶段为: 15:00 - 19:15
     盘前操作时段为: 每日19:15以后"""
@@ -177,17 +177,46 @@ def run_nothing() -> bool:
         return False
 
 
-def dont_trading() -> bool:
-    """根据当前时间判断目前所处时段是否需要执行交易
-    不执行交易的时间段为: 15:00 - 20:45
-    开始监控交易时间段为: 每日20:45以后"""
+def none_trade_time() -> bool:
+    """根据当前时间判断目前所处时段是否为非交易时段
+    非交易时段包括两个部分：
+    1. 交易开始前：15:00-20:50
+    2. 交易间歇期：2:35-8:50 和 11:35-13:20
+    """
+    return before_trade_time() or rest_time()
+
+
+def before_trade_time() -> bool:
+    """根据当前时间判断目前所处时段是否为开盘前时段。
+    目前开盘前时段为: 15:00-20:50"""
     now = datetime.now(tz_utc_8)
     hour = now.hour
     minutes = now.minute
     if _is_weekend(now):
         return True
     else:
-        if (hour >= 15 and hour < 20) or (hour == 20 and minutes < 45):
+        if (hour >= 15 and hour < 20) or (hour == 20 and minutes < 50):
+            return True
+        return False
+
+
+def rest_time() -> bool:
+    """交易日中的主要休息时段
+    夜盘为2:35-8:50, 日盘为11:35-13:20"""
+    now = datetime.now(tz_utc_8)
+    hour = now.hour
+    minutes = now.minute
+    if _is_weekend(now):
+        return True
+    else:
+        if (
+            (hour >= 3 and hour < 8)
+            or (hour == 8 and minutes < 50)
+            or (hour == 2 and minutes > 35)
+            or (hour == 12)
+            or (hour == 11 and minutes > 35)
+            or (hour == 13 and minutes < 20)
+        ):
             return True
         return False
 

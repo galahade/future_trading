@@ -157,7 +157,7 @@ class RealStaker(Staker):
         if tr.has_run_pre_opt:
             logger.info("盘前提示信息已于之前产生 请访问数据库查看 开始进入交易".center(100, "*"))
         else:
-            if c_tools.run_nothing():
+            if c_tools.after_trade_time():
                 logger.info("盘前提示运行时间段为每日19:15之后。请耐心等待".center(100, "*"))
             else:
                 self._prepare_task()
@@ -171,22 +171,22 @@ class RealStaker(Staker):
     def _execute_trade(self, traders: list[Trader]) -> bool:
         logger = self.logger
         tr = self.trade_record
-        if tr.has_trade:
+        if tr.has_trade and c_tools.before_trade_time():
             logger.info(
                 "交易任务已完成，如有疑问，请修改数据库集合 trade_record.has_trade 后重新执行".center(
                     100, "*"
                 )
             )
         else:
-            if c_tools.dont_trading():
-                logger.info("交易时段为每日 20:45 之后，请耐心等待".center(100, "*"))
+            if c_tools.none_trade_time():
+                logger.info("当前为非交易时段，系统将会稍后重试".center(100, "*"))
             else:
                 c_tools.sendSystemStartupMsg(
                     datetime.now(), self.direction, self.strategy_ids
                 )
                 self._api.wait_update()
                 while True:
-                    if c_tools.dont_trading():
+                    if c_tools.none_trade_time():
                         break
                     elif tq_tools.is_trading_period(
                         self._api, self._common_quote
@@ -202,10 +202,11 @@ class RealStaker(Staker):
                                 self._common_quote
                             )
                         )
-                tr.has_trade = True
-                l_service.save_trade_record(tr)
-                logger.info("交易任务已结束，开始进行收盘操作".center(100, "*"))
-                self._execute_after_trade(traders)
+                if c_tools.before_trade_time():
+                    tr.has_trade = True
+                    l_service.save_trade_record(tr)
+                    logger.info("交易任务已结束，开始进行收盘操作".center(100, "*"))
+                    self._execute_after_trade(traders)
 
     def _execute_after_trade(self, traders: list[Trader]):
         logger = self.logger
